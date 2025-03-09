@@ -1,0 +1,13 @@
+server:
+  port: 52006
+  error:
+    include-message: always
+
+spring:
+  codec:
+    max-in-memory-size: 20MB
+
+WenXiaoBai:
+  userId:
+  tokens:
+    

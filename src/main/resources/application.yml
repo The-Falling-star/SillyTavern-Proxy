@@ -8,6 +8,7 @@ spring:
     max-in-memory-size: 20MB
 
 WenXiaoBai:
-  userId:
+  userId: 128824
   tokens:
-    
+    - Braser ksajdkljwalkjddklsahdklwadkl.sadjkalwjdklsad.xcoajskdjwkla
+

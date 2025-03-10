@@ -42,11 +42,8 @@ public class ZaiWenService implements DialogService {
     }
 
     @Override
-    public DialogVO notStreamResponseToDialogVO(Integer index, List<String> data) {
-        // TODO 需要解决如果多个swipe时返回多个json对象问题
-        StringBuilder stringBuilder = new StringBuilder();
-        data.forEach(stringBuilder::append);
-        return streamResponseToDialogVO(index,stringBuilder.toString());
+    public DialogVO notStreamResponseToDialogVO(Integer index, String data) {
+        return streamResponseToDialogVO(index,data);
     }
 
     @Override

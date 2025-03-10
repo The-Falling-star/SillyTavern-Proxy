@@ -5,12 +5,12 @@ import com.ling.sillytavernproxy.entity.CommonResponse;
 import com.ling.sillytavernproxy.entity.Model;
 import com.ling.sillytavernproxy.service.DialogService;
 import com.ling.sillytavernproxy.vo.DialogVO;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
@@ -42,9 +42,9 @@ public class DialogController {
     }
 
     @PostMapping(value = "/chat/completions")
-    public Flux<DialogVO> generates(@RequestBody DialogInputDTO dialogInputDTO, HttpServletResponse httpServletResponse){
-        if(dialogInputDTO.isStream()) httpServletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
-        else httpServletResponse.setContentType(MediaType.APPLICATION_STREAM_JSON_VALUE);
+    public Flux<DialogVO> generates(@RequestBody DialogInputDTO dialogInputDTO, ServerHttpResponse serverHttpResponse){
+        if(dialogInputDTO.isStream()) serverHttpResponse.getHeaders().setContentType(MediaType.TEXT_EVENT_STREAM);
+        else serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_NDJSON);
 
         if(dialogInputDTO.getModel().contains("zaiWen")) return zaiWenService.sendDialog(dialogInputDTO);
         if(dialogInputDTO.getModel().contains("wenXiaoBai")) return wenXiaoBaiService.sendDialog(dialogInputDTO);

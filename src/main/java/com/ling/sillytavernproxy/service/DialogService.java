@@ -2,6 +2,7 @@ package com.ling.sillytavernproxy.service;
 
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.vo.DialogVO;
+import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -12,8 +13,9 @@ import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public interface DialogService {
 
@@ -27,7 +29,7 @@ public interface DialogService {
         if (dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() < 1) dialogInputDTO.setReplyNum(1);
         log.info("开始请求");
 
-        return Flux.range(0, dialogInputDTO.getReplyNum())
+        Flux<DialogVO> flux = Flux.range(0, dialogInputDTO.getReplyNum())
                 .flatMap(index -> {
                     Flux<String> response = webClient.post()
                             .uri(getUrl())
@@ -45,10 +47,29 @@ public interface DialogService {
                             })
                             .doOnComplete(this::doOnComplete);
                     return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
-                            response.collectList()
+                            response.collect(Collectors.joining())
                                     .map(data -> this.notStreamResponseToDialogVO(index, data))
                                     .flux();
                 });
+
+        // 如果非流式回复,则将所有回复都收集起来
+        if (!dialogInputDTO.isStream()) {
+            /*
+            collectList()返回的类型为Mono<List<DialogVO>>
+            dialogVOS的类型为List<DialogVO>,这个数据包含了所有回复的DialogVO
+            */
+            flux = flux.collectList().map(dialogVOS -> {
+                        // 将List内的每个DialogVO的对话内容全部提取出来,放到ret的choice数组里
+                        DialogVO ret = new DialogVO(new ArrayList<>(dialogInputDTO.getReplyNum()));
+                        dialogVOS.forEach(dialogVO -> {
+                            CommonReplyVO commonReplyVO = (CommonReplyVO) dialogVO.getChoices().getFirst();
+                            ret.getChoices().add(commonReplyVO);// TODO 这里后续要按照index设置对话
+                        });
+                        return ret;
+                    })
+                    .flux();
+        }
+        return flux;
     }
 
     /**
@@ -73,9 +94,8 @@ public interface DialogService {
      *
      * @param index SillyTavern备选回复的序号
      * @param data  第三方回复的数据,可能是json,也可能是纯文字
-     * @return SillyTavern可解析的DialogVO对象
      */
-    DialogVO notStreamResponseToDialogVO(Integer index, List<String> data);
+    DialogVO notStreamResponseToDialogVO(Integer index, String data);
 
     /**
      * 获取第三方ai的请求url
@@ -85,7 +105,7 @@ public interface DialogService {
     String getUrl();
 
     /**
-     * 请求结束后要做的事情
+     * 请求结束后要做的事情,如请求删除对话框
      */
     default void doOnComplete() {
     }
@@ -99,6 +119,12 @@ public interface DialogService {
         return WEB_CLIENT;
     }
 
+    /**
+     * 确定对第三方api是否为流式回复
+     *
+     * @param dialogInputDTO 输入对象
+     * @return 如果需要第三方api流式返回则返回true
+     */
     default boolean isStream(DialogInputDTO dialogInputDTO) {
         return dialogInputDTO.isStream();
     }

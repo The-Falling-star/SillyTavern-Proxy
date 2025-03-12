@@ -13,4 +13,8 @@ public class FinalNumber {
     }
 
     public static final String ZAI_WEN_URL = "https://aliyun.zaiwen.top/admin";
+
+
+    public static final String DEEPSEEK_ALGORITHM = "DeepSeekHashV1";
+    public static final String DEEPSEEK_TARGET_PATH = "/api/v0/chat/completion";
 }

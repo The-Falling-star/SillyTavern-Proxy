@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.ling</groupId>
     <artifactId>SillyTavernProxy</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0</version>
     <name>SillyTavernProxy</name>
     <description>SillyTavernProxy</description>
     <url/>

@@ -3,3 +3,4 @@
 /target/
 .idea
 .vscode
+/src/main/resources/application-dev.yml

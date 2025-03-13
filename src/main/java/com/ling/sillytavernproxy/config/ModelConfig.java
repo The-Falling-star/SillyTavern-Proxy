@@ -10,8 +10,8 @@ public class ModelConfig {
 
     @Bean("models")
     public Map<String,String> getModels(){
-        return Map.of("zaiWen-deepseek-reasoner","deepseek-reasoner",
-                "wenXiaoBai-deepseek","200006",
-                "deepSeekR1","deepSeekR1");
+        return Map.of(FinalNumber.MODEL_ZAI_WEN_DEEPSEEK,"deepseek-reasoner",
+                FinalNumber.MODEL_WEN_XIAO_BAI_DEEPSEEK,"200006",
+                FinalNumber.MODEL_DEEPSEEK,"deepSeekR1");
     }
 }

@@ -16,7 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-@Service
+@Service("zaiWenService")
 @Slf4j
 @AllArgsConstructor
 public class ZaiWenService implements DialogService {
@@ -56,3 +56,6 @@ public class ZaiWenService implements DialogService {
         return true;
     }
 }
+
+
+

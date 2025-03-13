@@ -12,6 +12,7 @@ import com.ling.sillytavernproxy.entity.Message;
 import com.ling.sillytavernproxy.util.DeepSeekHashV1;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -20,13 +21,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
+@Service("deepSeekService")
 public class DeepSeekService implements DialogService {
 
     private final WebClient webClient;
 
+    @Value("${deepseek.tokens}")
+    private List<String> tokens;
+
+    private static int tokenCount;
+
     public DeepSeekService() {
         webClient = WebClient.builder().baseUrl("https://chat.deepseek.com/api/v0").build();
+        tokenCount = 0;
     }
 
     @Override
@@ -108,6 +115,8 @@ public class DeepSeekService implements DialogService {
         // 计算挑战
         String challenge = DeepSeekHashV1.computePowAnswer(createChallenge());
         headers.set("X-Ds-Pow-Response", challenge);
+        tokenCount = ++tokenCount % tokens.size();
+        headers.set("Authorization",tokens.get(tokenCount));
         return headers;
     }
 

@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 
-@Service
+@Service("wenXiaoBaiService")
 @Slf4j
 public class WenXiaoBaiService implements DialogService {
 
@@ -108,3 +108,4 @@ public class WenXiaoBaiService implements DialogService {
         return webClient;
     }
 }
+

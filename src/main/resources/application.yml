@@ -6,9 +6,16 @@ server:
 spring:
   codec:
     max-in-memory-size: 20MB
+  profiles:
+    active: dev
 
-WenXiaoBai:
-  userId: 128824
+wen-xiao-bai:
+  user-id: 128824
   tokens:
-    - Braser ksajdkljwalkjddklsahdklwadkl.sadjkalwjdklsad.xcoajskdjwkla
+    - Braser your wen xiao bai tokens
+
+deepseek:
+  tokens:
+    - Bearer your deepseek token
+
 

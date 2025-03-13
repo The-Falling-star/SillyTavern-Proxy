@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -24,6 +25,7 @@ public interface DialogService {
     Logger log = LoggerFactory.getLogger(DialogService.class);
 
     default Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
+        doOnBefore();
         WebClient webClient = getWebClient();
         Map<String, ?> requestBody = inputToRequestBody(dialogInputDTO);
         if (dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() < 1) dialogInputDTO.setReplyNum(1);
@@ -31,8 +33,16 @@ public interface DialogService {
 
         Flux<DialogVO> flux = Flux.range(0, dialogInputDTO.getReplyNum())
                 .flatMap(index -> {
-                    Flux<String> response = webClient.post()
-                            .uri(getUrl())
+                    WebClient.RequestBodyUriSpec request = webClient.post();
+
+                    // 设置请求头
+                    HttpHeaders headers = getHttpHeaders();
+                    if (headers != null){
+                        headers.forEach((headerName, headerValue) -> request.header(headerName, headerValue.toArray(new String[0])));
+                    }
+
+                    // 设置一些请求信息并请求
+                    Flux<String> response = request.uri(getUrl())
                             .bodyValue(requestBody)
                             .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
                             .retrieve()
@@ -46,6 +56,7 @@ public interface DialogService {
                                 }
                             })
                             .doOnComplete(this::doOnComplete);
+
                     return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
                             response.collect(Collectors.joining())
                                     .map(data -> this.notStreamResponseToDialogVO(index, data))
@@ -107,7 +118,7 @@ public interface DialogService {
     /**
      * 请求结束后要做的事情,如请求删除对话框
      */
-    default void doOnComplete() {
+    default void doOnComplete(Object... params) {
     }
 
     /**
@@ -129,4 +140,18 @@ public interface DialogService {
         return dialogInputDTO.isStream();
     }
 
+    /**
+     * 在请求之前需要做的事情
+     */
+    default void doOnBefore() {
+    }
+
+    /**
+     * 获取请求头
+     *
+     * @return HttpHeaders对象
+     */
+    default HttpHeaders getHttpHeaders() {
+        return null;
+    }
 }

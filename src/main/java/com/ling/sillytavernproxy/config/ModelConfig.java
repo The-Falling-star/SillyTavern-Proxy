@@ -11,6 +11,7 @@ public class ModelConfig {
     @Bean("models")
     public Map<String,String> getModels(){
         return Map.of("zaiWen-deepseek-reasoner","deepseek-reasoner",
-                "wenXiaoBai-deepseek","200006");
+                "wenXiaoBai-deepseek","200006",
+                "deepseekR1","deepseekR1");
     }
 }

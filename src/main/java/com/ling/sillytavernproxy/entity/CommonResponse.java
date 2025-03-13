@@ -6,5 +6,12 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CommonResponse {
-    Object data;
+    private int code;
+    private String msg;
+    private Object data;
+
+    public CommonResponse(int code, String msg){
+        this.code = code;
+        this.msg = msg;
+    }
 }

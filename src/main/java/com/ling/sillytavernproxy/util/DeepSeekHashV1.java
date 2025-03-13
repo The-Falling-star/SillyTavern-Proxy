@@ -1,7 +1,7 @@
 package com.ling.sillytavernproxy.util;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.ling.sillytavernproxy.config.FinalNumber;
+import com.ling.sillytavernproxy.entity.DeepSeek.PowChallenge;
 import io.github.kawamuray.wasmtime.*;
 import io.github.kawamuray.wasmtime.Module;
 import lombok.extern.slf4j.Slf4j;
@@ -18,13 +18,13 @@ import java.util.Base64;
 
 @Slf4j
 public class DeepSeekHashV1 {
-    
+
     private static final String WASM_PATH = "../../../../../resources/sha3_wasm_bg.7b9ca65ddd.wasm";
     private static Memory memory;
     private static Func allocate; //__wbindgen_export_0
     private static final int WASM_PAGE_SIZE = 65536; // WASM 内存页大小
 
-    public static Integer computePowAnswer(String algorithm, String challengeStr, String salt, int difficulty, long expireAt) throws IOException {
+    private static Integer getAnswer(String algorithm, String challengeStr, String salt, int difficulty, long expireAt) throws IOException {
 
         if (!"DeepSeekHashV1".equals(algorithm)) throw new IllegalArgumentException("Unsupported algorithm: " + algorithm);
         String prefix = salt + "_" + expireAt + "_";
@@ -115,23 +115,32 @@ public class DeepSeekHashV1 {
         return ptr;
     }
 
-    public String getAnswer(String challenge, String salt, String signature, int difficulty, long expireAt) throws IOException {
+    public static String computePowAnswer(PowChallenge powChallenge){
         // 计算答案
-        Integer answer = computePowAnswer(FinalNumber.DEEPSEEK_ALGORITHM, challenge, salt, difficulty, expireAt);
+        Integer answer = null;
+        try {
+            answer = getAnswer(powChallenge.getAlgorithm(),
+                    powChallenge.getChallenge(),
+                    powChallenge.getSalt(),
+                    (int) powChallenge.getDifficulty(),
+                    powChallenge.getExpireAt());
+        } catch (IOException e) {
+            log.warn("找不到WASM文件!!!");
+            return null;
+        }
         if(answer != null) log.info("找到答案:{}",answer);
         else log.info("找不到答案");
 
         // 构建 JSON 对象
         JSONObject powResponse = new JSONObject();
-        powResponse.set("algorithm", FinalNumber.DEEPSEEK_ALGORITHM);
-        powResponse.set("challenge", challenge);
-        powResponse.set("salt", salt);
+        powResponse.set("algorithm", powChallenge.getAlgorithm());
+        powResponse.set("challenge", powChallenge.getChallenge());
+        powResponse.set("salt", powChallenge.getSalt());
         powResponse.set("answer", answer);
-        powResponse.set("signature", signature);
-        powResponse.set("target_path", FinalNumber.DEEPSEEK_TARGET_PATH);
+        powResponse.set("signature", powChallenge.getSignature());
+        powResponse.set("target_path", powChallenge.getTargetPath());
 
         // 按照顺序来Base64编码
         return Base64.getEncoder().encodeToString(JSONUtil.toJsonStr(powResponse).getBytes(StandardCharsets.UTF_8));
     }
-
 }

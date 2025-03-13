@@ -126,8 +126,11 @@ public class DeepSeekService implements DialogService {
                 .block();
     }
 
+    /**
+     * 回复完后删除会话
+     */
     @Override
-    public void doOnComplete(Object... params) {
+    public void doOnComplete() {
         // TODO 用缓存实现获取要删除的会话id
         webClient.post()
                 .uri("chat_session/delete")

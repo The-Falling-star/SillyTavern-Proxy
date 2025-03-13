@@ -14,4 +14,10 @@ public class CommonResponse {
         this.code = code;
         this.msg = msg;
     }
+
+    public CommonResponse(Object data){
+        this.data = data;
+        code = 200;
+        msg = "success";
+    }
 }

@@ -55,7 +55,7 @@ public interface DialogService {
                                     DataBufferUtils.release(buffer); // 必须显式释放
                                 }
                             })
-                            .doOnComplete(this::doOnComplete);
+                            .doOnComplete(() -> doOnComplete());
 
                     return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
                             response.collect(Collectors.joining())
@@ -118,7 +118,7 @@ public interface DialogService {
     /**
      * 请求结束后要做的事情,如请求删除对话框
      */
-    default void doOnComplete(Object... params) {
+    default void doOnComplete() {
     }
 
     /**

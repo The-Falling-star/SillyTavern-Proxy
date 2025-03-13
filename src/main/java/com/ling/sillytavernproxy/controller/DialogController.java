@@ -29,6 +29,9 @@ public class DialogController {
     @Qualifier("wenXiaoBaiService")
     private DialogService wenXiaoBaiService;
 
+    @Qualifier("deepSeekService")
+    private DialogService deepSeekService;
+
     /**
      * 检查连接状态
      * @return 返回可用模型
@@ -38,6 +41,7 @@ public class DialogController {
         List<Model> models = new LinkedList<>();
         models.add(new Model("zaiWen-deepseek-reasoner"));
         models.add(new Model("wenXiaoBai-deepseek"));
+        models.add(new Model("deepSeekR1"));
         return new CommonResponse(models);
     }
 
@@ -48,6 +52,7 @@ public class DialogController {
 
         if(dialogInputDTO.getModel().contains("zaiWen")) return zaiWenService.sendDialog(dialogInputDTO);
         if(dialogInputDTO.getModel().contains("wenXiaoBai")) return wenXiaoBaiService.sendDialog(dialogInputDTO);
+        if (dialogInputDTO.getModel().contains("deepSeek")) return deepSeekService.sendDialog(dialogInputDTO);
         throw new RuntimeException("未知模型");
     }
 

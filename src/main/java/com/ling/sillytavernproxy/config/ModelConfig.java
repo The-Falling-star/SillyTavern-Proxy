@@ -12,6 +12,6 @@ public class ModelConfig {
     public Map<String,String> getModels(){
         return Map.of("zaiWen-deepseek-reasoner","deepseek-reasoner",
                 "wenXiaoBai-deepseek","200006",
-                "deepseekR1","deepseekR1");
+                "deepSeekR1","deepSeekR1");
     }
 }

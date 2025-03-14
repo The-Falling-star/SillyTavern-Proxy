@@ -9,14 +9,18 @@ import com.ling.sillytavernproxy.entity.CommonResponse;
 import com.ling.sillytavernproxy.entity.DeepSeek.DeepSeekRequestBody;
 import com.ling.sillytavernproxy.entity.DeepSeek.PowChallenge;
 import com.ling.sillytavernproxy.entity.Message;
+import com.ling.sillytavernproxy.properties.DeepSeekProperty;
 import com.ling.sillytavernproxy.util.DeepSeekHashV1;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,22 +30,27 @@ public class DeepSeekService implements DialogService {
 
     private final WebClient webClient;
 
-    @Value("${deepseek.tokens}")
-    private List<String> tokens;
+    private final List<String> tokens;
 
     private static int tokenCount;
 
-    public DeepSeekService() {
-        webClient = WebClient.builder().baseUrl("https://chat.deepseek.com/api/v0").build();
+    RedisTemplate<String,String> redisTemplate;
+
+    RestTemplate restTemplate;
+
+    public DeepSeekService(RedisTemplate<String,String> redisTemplate, DeepSeekProperty deepSeekProperty, RestTemplate restTemplate) {
+        webClient = WebClient.builder().baseUrl(FinalNumber.DEEP_SEEK_BASE_URL).build();
         tokenCount = 0;
+        this.redisTemplate = redisTemplate;
+        tokens = deepSeekProperty.getTokens() == null ? new ArrayList<>() : deepSeekProperty.getTokens();
+        this.restTemplate = restTemplate;
     }
 
     @Override
-    public Map<String, ?> inputToRequestBody(DialogInputDTO dialogInputDTO) {
-        String sessionId = createSessionId();
+    public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         DeepSeekRequestBody requestBody = new DeepSeekRequestBody();
+        // 会话id在doOnBefore设置,因为多次请求的话会话id是不一样的
         requestBody.setPrompt(JSONUtil.toJsonStr(dialogInputDTO.getMessages()));
-        requestBody.setChatSessionId(sessionId);
         return BeanUtil.beanToMap(requestBody);
     }
 
@@ -98,24 +107,37 @@ public class DeepSeekService implements DialogService {
     private String createSessionId() {
         Map<String, String> requestBody = new HashMap<>();
         requestBody.put("character_id", null);
-        return webClient.post()
-                .uri("/chat_session/create")
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(CommonResponse.class)
-                .map(response -> JSONUtil.parseObj(response.getData())
-                        .get("biz_data", JSONObject.class)
-                        .get("id", String.class))
-                .block();
+        CommonResponse response = restTemplate.postForObject(FinalNumber.DEEP_SEEK_BASE_URL + "/chat_session/create",
+                        requestBody,
+                        CommonResponse.class);
+        return JSONUtil.parseObj(response.getData())
+                .get("biz_data", JSONObject.class)
+                .get("id", String.class);
     }
 
     @Override
     public HttpHeaders getHttpHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        // 计算挑战
-        String challenge = DeepSeekHashV1.computePowAnswer(createChallenge());
-        headers.set("X-Ds-Pow-Response", challenge);
-        tokenCount = ++tokenCount % tokens.size();
+        String key = "DeepSeek:" + tokens.get(tokenCount);
+        String expireTime = (String) redisTemplate.opsForHash().get(key, FinalNumber.DEEPSEEK_CHALLENGE_EXPIRE);
+
+        // 如果没找到过期时间或者Pow已经过期
+        if(expireTime == null || Instant.ofEpochMilli(Long.parseLong(expireTime)).isBefore(Instant.now())) {
+            PowChallenge challenge = createChallenge();
+
+            // 计算挑战
+            String header = DeepSeekHashV1.computePowAnswer(challenge);
+            if(header == null || header.isEmpty()){
+                throw new RuntimeException("计算不出deepseek请求头");
+            }
+
+            // 存入redis
+            redisTemplate.opsForHash().put(key, FinalNumber.DEEPSEEK_CHALLENGE_EXPIRE, challenge.getExpireAt());
+            redisTemplate.opsForHash().put(key, FinalNumber.DEEP_SEEK_CHALLENGE_HEADER, header);
+            headers.set(FinalNumber.DEEP_SEEK_CHALLENGE_HEADER, header);
+        }
+        else headers.set(FinalNumber.DEEP_SEEK_CHALLENGE_HEADER, (String) redisTemplate.opsForHash().get(key,FinalNumber.DEEP_SEEK_CHALLENGE_HEADER));
+
         headers.set("Authorization",tokens.get(tokenCount));
         return headers;
     }
@@ -126,7 +148,6 @@ public class DeepSeekService implements DialogService {
      * @return PowChallenge挑战参数实体类
      */
     private PowChallenge createChallenge() {
-        // TODO 以后要做一个缓存
         return webClient.post()
                 .uri("chat/create_pow_challenge")
                 .bodyValue(Map.of("target_path", FinalNumber.DEEPSEEK_TARGET_PATH))
@@ -139,15 +160,36 @@ public class DeepSeekService implements DialogService {
      * 回复完后删除会话
      */
     @Override
-    public void doOnComplete() {
-        // TODO 用缓存实现获取要删除的会话id
+    public void doOnComplete(Integer index) {
+        /*if(index == null) return;
+        // 从redis获取会话id
+        String key = "DeepSeek:" + tokens.get(tokenCount);
+        String sessionId = (String) redisTemplate.opsForHash().get(key, FinalNumber.DEEPSEEK_SESSION_ID + index);
+
+        // 删除会话id
         webClient.post()
                 .uri("chat_session/delete")
-                .bodyValue(Map.of("chat_session_id", ""))
+                .bodyValue(Map.of("chat_session_id", sessionId))
                 .retrieve()
                 .onStatus(status -> !status.is2xxSuccessful(), res -> {
                     log.info("删除对话失败");
                     return null;
                 });
+        // 从redis删除会话id
+        redisTemplate.opsForHash().delete(key, FinalNumber.DEEPSEEK_SESSION_ID + index);*/
+    }
+
+    @Override
+    public void doOnBefore(Map<String, Object> requestBody, Integer index){
+        // 创建会话id
+        String sessionId = createSessionId();
+        String key = "DeepSeek:" + tokens.get(tokenCount);
+        requestBody.put("chat_session_id",sessionId);
+        redisTemplate.opsForHash().put(key, FinalNumber.DEEPSEEK_SESSION_ID + index, sessionId);
+    }
+
+    @Override
+    public void sendOnBefore(DialogInputDTO dialogInputDTO) {
+        tokenCount = ++tokenCount % tokens.size();
     }
 }

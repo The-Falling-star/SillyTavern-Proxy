@@ -117,7 +117,7 @@ public class DeepSeekHashV1 {
 
     public static String computePowAnswer(PowChallenge powChallenge){
         // 计算答案
-        Integer answer = null;
+        Integer answer;
         try {
             answer = getAnswer(powChallenge.getAlgorithm(),
                     powChallenge.getChallenge(),

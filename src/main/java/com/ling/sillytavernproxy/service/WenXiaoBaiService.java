@@ -36,7 +36,7 @@ public class WenXiaoBaiService implements DialogService {
     }
 
     @Override
-    public Map<String, ?> inputToRequestBody(DialogInputDTO dialogInputDTO) {
+    public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         WenXiaoBaiRequestBody wenXiaoBaiRequestBody = new WenXiaoBaiRequestBody();
         wenXiaoBaiRequestBody.setBotId(models.get(dialogInputDTO.getModel()));
         wenXiaoBaiRequestBody.setConversationId(createConversation(Integer.parseInt(models.get("deepseek-wenXiaoBai"))));
@@ -95,7 +95,7 @@ public class WenXiaoBaiService implements DialogService {
     }
 
     @Override
-    public void doOnComplete() {
+    public void doOnComplete(Integer index) {
         String url = "/users/" + FinalNumber.XIAO_BAI_USERID + "/bots";
         webClient.post()
                 .uri(url)

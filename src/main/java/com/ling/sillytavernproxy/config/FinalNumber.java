@@ -14,9 +14,16 @@ public class FinalNumber {
 
     public static final String ZAI_WEN_URL = "https://aliyun.zaiwen.top/admin";
     public static final String DEEPSEEK_TARGET_PATH = "/api/v0/chat/completion";
+    public static final String DEEP_SEEK_CHALLENGE_HEADER = "X-Ds-Pow-Response";
+    public static final String DEEP_SEEK_BASE_URL = "https://chat.deepseek.com/api/v0";
 
     // 模型常量
     public static final String MODEL_ZAI_WEN_DEEPSEEK = "zaiWen-deepseek-reasoner";
     public static final String MODEL_DEEPSEEK = "deepSeekR1";
     public static final String MODEL_WEN_XIAO_BAI_DEEPSEEK = "wenXiaoBai-deepseek";
+
+    // redis的key值
+    public static final String DEEPSEEK_CHALLENGE_EXPIRE = "expire_at";
+    public static final String DEEPSEEK_SESSION_ID = "session_id";
 }
+

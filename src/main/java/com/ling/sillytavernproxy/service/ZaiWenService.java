@@ -24,7 +24,7 @@ public class ZaiWenService implements DialogService {
     Map<String,String> models;
 
     @Override
-    public Map<String, ?> inputToRequestBody(DialogInputDTO dialogInputDTO) {
+    public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         ZaiWenRequestBody requestBody = new ZaiWenRequestBody(dialogInputDTO);
         requestBody.setMode(models.get(dialogInputDTO.getModel()));
         return BeanUtil.beanToMap(requestBody);

@@ -8,6 +8,10 @@ spring:
     max-in-memory-size: 20MB
   profiles:
     active: dev
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 wen-xiao-bai:
   user-id: 128824

@@ -11,10 +11,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -25,14 +27,15 @@ public interface DialogService {
     Logger log = LoggerFactory.getLogger(DialogService.class);
 
     default Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
-        doOnBefore();
         WebClient webClient = getWebClient();
         Map<String, ?> requestBody = inputToRequestBody(dialogInputDTO);
         if (dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() < 1) dialogInputDTO.setReplyNum(1);
         log.info("开始请求");
+        sendOnBefore(dialogInputDTO);
 
         Flux<DialogVO> flux = Flux.range(0, dialogInputDTO.getReplyNum())
                 .flatMap(index -> {
+                    doOnBefore(new HashMap<>(requestBody),index);
                     WebClient.RequestBodyUriSpec request = webClient.post();
 
                     // 设置请求头
@@ -55,7 +58,7 @@ public interface DialogService {
                                     DataBufferUtils.release(buffer); // 必须显式释放
                                 }
                             })
-                            .doOnComplete(() -> doOnComplete());
+                            .doOnComplete(() -> doOnComplete(index));
 
                     return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
                             response.collect(Collectors.joining())
@@ -80,6 +83,7 @@ public interface DialogService {
                     })
                     .flux();
         }
+        sendOnComplete();
         return flux;
     }
 
@@ -89,7 +93,7 @@ public interface DialogService {
      * @param dialogInputDTO SillyTavern传进来的对话数据
      * @return 一个Map的请求体
      */
-    Map<String, ?> inputToRequestBody(DialogInputDTO dialogInputDTO);
+    Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO);
 
     /**
      * 将第三方回复的流式数据转换为SillyTavern可解析的DialogVO对象
@@ -116,9 +120,9 @@ public interface DialogService {
     String getUrl();
 
     /**
-     * 请求结束后要做的事情,如请求删除对话框
+     * 在每次请求结束后要做的事情,如请求删除对话框
      */
-    default void doOnComplete() {
+    default void doOnComplete(Integer index) {
     }
 
     /**
@@ -141,10 +145,9 @@ public interface DialogService {
     }
 
     /**
-     * 在请求之前需要做的事情
+     * 在每次发送对话前需要做的事情
      */
-    default void doOnBefore() {
-    }
+    default void doOnBefore(Map<String, Object> requestBody, Integer index) {}
 
     /**
      * 获取请求头
@@ -153,5 +156,17 @@ public interface DialogService {
      */
     default HttpHeaders getHttpHeaders() {
         return null;
+    }
+
+    /**
+     * 在总请求之前需要做的事情
+     */
+    default void sendOnBefore(DialogInputDTO dialogInputDTO) {
+    }
+
+    /**
+     * 在总请求之后需要做的事情
+     */
+    default void sendOnComplete() {
     }
 }

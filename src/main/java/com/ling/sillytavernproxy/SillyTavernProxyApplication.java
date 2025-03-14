@@ -24,14 +24,14 @@ public class SillyTavernProxyApplication {
         // 3. 获取Properties对象
         Properties props = factory.getObject();
         // 4. 读取配置项（支持嵌套格式，如 "server.port"）
-        Integer userId = (Integer) props.get("WenXiaoBai.userId");
+        Integer userId = (Integer) props.get("wen-xiao-bai.user-id");
         if (userId == null) {
             throw new RuntimeException("WenXiaoBai.userId is null");
         }
         FinalNumber.XIAO_BAI_USERID = userId;
         String token;
         int i = 0;
-        while((token = (String) props.get("WenXiaoBai.tokens[" + i++ + "]")) != null)
+        while((token = (String) props.get("wen-xiao-bai.tokens[" + i++ + "]")) != null)
             FinalNumber.XIAO_BAI_TOKENS.add(token);
 
 

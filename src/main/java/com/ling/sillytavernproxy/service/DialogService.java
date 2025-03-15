@@ -1,5 +1,6 @@
 package com.ling.sillytavernproxy.service;
 
+import cn.hutool.json.JSONUtil;
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
@@ -11,7 +12,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -28,43 +28,47 @@ public interface DialogService {
 
     default Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
         WebClient webClient = getWebClient();
-        Map<String, ?> requestBody = inputToRequestBody(dialogInputDTO);
+        Map<String, ?> body = inputToRequestBody(dialogInputDTO);
         if (dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() < 1) dialogInputDTO.setReplyNum(1);
         log.info("开始请求");
         sendOnBefore(dialogInputDTO);
 
         Flux<DialogVO> flux = Flux.range(0, dialogInputDTO.getReplyNum())
-                .flatMap(index -> {
-                    doOnBefore(new HashMap<>(requestBody),index);
-                    WebClient.RequestBodyUriSpec request = webClient.post();
+                .flatMap(index -> doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
+                        .flatMap(requestBody -> {
+                            return getHttpHeaders()
+                                    .flatMap(headers -> {
+                                        WebClient.RequestBodyUriSpec request = webClient.post();
 
-                    // 设置请求头
-                    HttpHeaders headers = getHttpHeaders();
-                    if (headers != null){
-                        headers.forEach((headerName, headerValue) -> request.header(headerName, headerValue.toArray(new String[0])));
-                    }
+                                        if (headers != null) {
+                                            headers.forEach((headerName, headerValue) -> request.header(headerName, headerValue.toArray(new String[0])));
+                                        }
 
-                    // 设置一些请求信息并请求
-                    Flux<String> response = request.uri(getUrl())
-                            .bodyValue(requestBody)
-                            .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
-                            .retrieve()
-                            .bodyToFlux(DataBuffer.class)
-                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
-                            .map(buffer -> {
-                                try {
-                                    return buffer.toString(StandardCharsets.UTF_8);
-                                } finally {
-                                    DataBufferUtils.release(buffer); // 必须显式释放
-                                }
-                            })
-                            .doOnComplete(() -> doOnComplete(index));
+                                        log.info("开始第{}次请求",index);
+                                        // 设置一些请求信息并请求
+                                        Flux<String> response = request.uri(getUrl())
+                                                .bodyValue(requestBody)
+                                                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                                .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
+                                                .retrieve()
+                                                .bodyToFlux(DataBuffer.class)
+                                                .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
+                                                .map(buffer -> {
+                                                    log.info("接收到回复:{}",buffer.toString(StandardCharsets.UTF_8));
+                                                    try {
+                                                        return buffer.toString(StandardCharsets.UTF_8);
+                                                    } finally {
+                                                        DataBufferUtils.release(buffer); // 必须显式释放
+                                                    }
+                                                })
+                                                .doOnComplete(() -> doOnComplete(index));
 
-                    return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
-                            response.collect(Collectors.joining())
-                                    .map(data -> this.notStreamResponseToDialogVO(index, data))
-                                    .flux();
-                });
+                                        return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
+                                                response.collect(Collectors.joining())
+                                                        .map(data -> this.notStreamResponseToDialogVO(index, data))
+                                                        .flux();
+                                    });
+                        }));
 
         // 如果非流式回复,则将所有回复都收集起来
         if (!dialogInputDTO.isStream()) {
@@ -147,15 +151,17 @@ public interface DialogService {
     /**
      * 在每次发送对话前需要做的事情
      */
-    default void doOnBefore(Map<String, Object> requestBody, Integer index) {}
+    default Flux<Map<String, Object>> doOnBefore(Map<String, Object> requestBody, Integer index) {
+        return Flux.just(requestBody);
+    }
 
     /**
      * 获取请求头
      *
      * @return HttpHeaders对象
      */
-    default HttpHeaders getHttpHeaders() {
-        return null;
+    default Flux<HttpHeaders> getHttpHeaders() {
+        return Flux.empty();
     }
 
     /**

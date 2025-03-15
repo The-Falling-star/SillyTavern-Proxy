@@ -1,8 +1,10 @@
 package com.ling.sillytavernproxy.entity.DeepSeek;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -10,12 +12,12 @@ public class DeepSeekRequestBody {
     @JsonProperty("chat_session_id")
     private String chatSessionId;
 
-    @JsonProperty("parent_message_id")
+    @JsonProperty(value = "parent_message_id",required = true)
     private Integer parentMessageId;
 
     private String prompt;
 
-    @JsonProperty("ref_file_ids")
+    @JsonProperty(value = "ref_file_ids")
     private List<String> refFileIds;
 
     @JsonProperty("search_enabled")
@@ -27,5 +29,6 @@ public class DeepSeekRequestBody {
     public DeepSeekRequestBody() {
         searchEnabled = true;
         thinkingEnabled = false;
+        refFileIds = new ArrayList<>();
     }
 }

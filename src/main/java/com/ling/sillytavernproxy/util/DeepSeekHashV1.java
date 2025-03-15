@@ -7,6 +7,8 @@ import io.github.kawamuray.wasmtime.Module;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -19,18 +21,19 @@ import java.util.Base64;
 @Slf4j
 public class DeepSeekHashV1 {
 
-    private static final String WASM_PATH = "../../../../../resources/sha3_wasm_bg.7b9ca65ddd.wasm";
+    private static final URL WASM_PATH = DeepSeekHashV1.class.getClassLoader().getResource("sha3_wasm_bg.7b9ca65ddd.wasm");
+
     private static Memory memory;
     private static Func allocate; //__wbindgen_export_0
     private static final int WASM_PAGE_SIZE = 65536; // WASM 内存页大小
 
-    private static Integer getAnswer(String algorithm, String challengeStr, String salt, int difficulty, long expireAt) throws IOException {
+    private static Integer getAnswer(String algorithm, String challengeStr, String salt, int difficulty, long expireAt) throws IOException, URISyntaxException {
 
         if (!"DeepSeekHashV1".equals(algorithm)) throw new IllegalArgumentException("Unsupported algorithm: " + algorithm);
         String prefix = salt + "_" + expireAt + "_";
 
         // 1. 加载 WASM 模块
-        Path wasmFile = Paths.get(WASM_PATH);
+        Path wasmFile = Paths.get(WASM_PATH.toURI());
         byte[] wasmBytes = Files.readAllBytes(wasmFile);
 
         try (Engine engine = new Engine();
@@ -127,6 +130,8 @@ public class DeepSeekHashV1 {
         } catch (IOException e) {
             log.warn("找不到WASM文件!!!");
             return null;
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("找不到WASM文件!!!");
         }
         if(answer != null) log.info("找到答案:{}",answer);
         else log.info("找不到答案");

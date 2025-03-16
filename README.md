@@ -23,8 +23,19 @@ SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某�
 
 #### 安装docker(如果你已经安装了,可以跳过)
 ```bash
+# 安装docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
+
+# 安装docker-compose
+apt update
+apt install docker-compose-plugin
+
+#启动docker
+systemctl start docker
+
+# 设置docker开机自启
+systemctl enable docker
 ```
 
 #### 拉取项目相关文件

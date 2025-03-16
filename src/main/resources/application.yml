@@ -12,8 +12,6 @@ spring:
     redis:
       host: localhost
       port: 6379
-  jackson:
-    default-property-inclusion: always
 
 wen-xiao-bai:
   user-id: 128824
@@ -23,9 +21,5 @@ wen-xiao-bai:
 deepseek:
   tokens:
     - Bearer your deepseek token
-logging:
-  level:
-    org.springframework.web.reactive.function.client.ExchangeFunctions: trace
-    org.springframework.http.codec.json: trace
 debug: true
 

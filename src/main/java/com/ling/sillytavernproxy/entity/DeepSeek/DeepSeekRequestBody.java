@@ -1,6 +1,5 @@
 package com.ling.sillytavernproxy.entity.DeepSeek;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -27,8 +26,8 @@ public class DeepSeekRequestBody {
     private boolean thinkingEnabled;
 
     public DeepSeekRequestBody() {
-        searchEnabled = true;
-        thinkingEnabled = false;
+        searchEnabled = false;
+        thinkingEnabled = true;
         refFileIds = new ArrayList<>();
     }
 }

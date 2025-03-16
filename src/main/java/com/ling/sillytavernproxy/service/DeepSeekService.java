@@ -17,7 +17,6 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -38,9 +37,7 @@ public class DeepSeekService implements DialogService {
 
     ReactiveRedisTemplate<String, String> redisTemplate;
 
-    RestTemplate restTemplate;
-
-    public DeepSeekService(ReactiveRedisTemplate<String, String> redisTemplate, DeepSeekProperty deepSeekProperty, RestTemplate restTemplate) {
+    public DeepSeekService(ReactiveRedisTemplate<String, String> redisTemplate, DeepSeekProperty deepSeekProperty) {
         webClient = WebClient.builder()
                 .baseUrl(FinalNumber.DEEP_SEEK_BASE_URL)
                 .defaultHeader("X-App-Version", "20241129.1")
@@ -59,14 +56,13 @@ public class DeepSeekService implements DialogService {
         tokenCount = 0;
         this.redisTemplate = redisTemplate;
         tokens = deepSeekProperty.getTokens() == null ? new ArrayList<>() : deepSeekProperty.getTokens();
-        this.restTemplate = restTemplate;
     }
 
     @Override
     public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         DeepSeekRequestBody requestBody = new DeepSeekRequestBody();
         // 会话id在doOnBefore设置,因为多次请求的话会话id是不一样的
-        requestBody.setPrompt(JSONUtil.toJsonStr(dialogInputDTO.getMessages()));
+        requestBody.setPrompt(JSONUtil.toJsonStr(/*dialogInputDTO.getMessages()*/"区块链是什么,存在的意义是什么,历史发展大概是怎么样的呢"));
         return BeanUtil.beanToMap(requestBody, true, false);// 大坑,不能忽略null值
     }
 
@@ -108,9 +104,30 @@ public class DeepSeekService implements DialogService {
 
         JSONObject jsonObject = JSONUtil.parseObj(responseBody);
         List<?> choices = jsonObject.get("choices", List.class);
-
         if (choices.isEmpty()) return new DialogVO(null);
         JSONObject result = JSONUtil.parseObj(choices.getFirst());
+
+        // 存在结束标记的情况
+        String finishReason = result.get("finish_reason", String.class);
+        if(finishReason != null){
+            return switch (finishReason){
+                case "stop" ->{
+                    log.info("对话正常结束");
+                    yield new DialogVO(List.of(new ReplyVO(index, false)));
+                }
+                case "content_filter" -> {
+                    log.info("对话存在违禁词,被截断了");
+                    yield new DialogVO(List.of(new ReplyVO(index, true)));
+                }
+                default -> {
+                    log.warn("对话非正常结束,原因:{}", finishReason);
+                    yield new DialogVO(List.of(new ReplyVO(index, true)));
+                }
+            };
+
+        }
+
+        // 正常返回
         String content = result.get("delta", JSONObject.class).get("content", String.class);
         Message message = new Message("assistant", content);
         return new DialogVO(List.of(new CommonReplyVO(message, index, false)));
@@ -118,6 +135,7 @@ public class DeepSeekService implements DialogService {
 
     @Override
     public DialogVO notStreamResponseToDialogVO(Integer index, String data) {
+        // 因为这个网站只能流式返回数据,因此处理方式和流式数据处理方式一样
         return streamResponseToDialogVO(index, data);
     }
 
@@ -131,19 +149,25 @@ public class DeepSeekService implements DialogService {
         return webClient;
     }
 
+    @Override
+    public boolean isStream(DialogInputDTO dialogInputDTO) {
+        // deepseek网站只支持流式返回
+        return true;
+    }
+
     /**
      * 获取一个会话id
      *
      * @return 会话id字符串
      */
-    private Flux<String> createSessionId() {
+    private Flux<String> createSessionId(int index) {
         Map<String, String> requestBody = new HashMap<>();
         requestBody.put("character_id", null);
         return webClient.post()
                 .uri("/chat_session/create")
                 .bodyValue(requestBody)
                 .accept(MediaType.APPLICATION_JSON)
-                .header(HttpHeaders.AUTHORIZATION, tokens.get(tokenCount))
+                .header(HttpHeaders.AUTHORIZATION, tokens.get((tokenCount + index) % tokens.size()))
                 .retrieve()
                 .bodyToFlux(JSONObject.class)
                 .map(response -> response.get("data", JSONObject.class)
@@ -152,16 +176,14 @@ public class DeepSeekService implements DialogService {
     }
 
     @Override
-    public Flux<HttpHeaders> getHttpHeaders() {
+    public Flux<HttpHeaders> getHttpHeaders(Map<String,Object> requestBody, Integer index) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, tokens.get(tokenCount));
+        headers.set(HttpHeaders.AUTHORIZATION, tokens.get((tokenCount + index) % tokens.size()));
         // 创建 challenge
-        return createChallenge().flatMap(challenge -> {
+        return createChallenge(index).flatMap(challenge -> {
                     // 计算挑战
                     String header = DeepSeekHashV1.computePowAnswer(challenge);
-                    if (header == null || header.isEmpty()) {
-                        return Mono.error(new RuntimeException("计算Pow失败"));
-                    }
+                    if (header == null || header.isEmpty()) return Mono.error(new RuntimeException("计算Pow失败"));
                     log.info("计算出请求头为:{}", header);
 
                     // 设置 header
@@ -176,11 +198,11 @@ public class DeepSeekService implements DialogService {
      *
      * @return PowChallenge挑战参数实体类
      */
-    private Mono<PowChallenge> createChallenge() {
+    private Mono<PowChallenge> createChallenge(Integer index) {
         return webClient.post()
                 .uri("/chat/create_pow_challenge")
                 .bodyValue(Map.of("target_path", FinalNumber.DEEPSEEK_TARGET_PATH))
-                .header(HttpHeaders.AUTHORIZATION, tokens.get(tokenCount))
+                .header(HttpHeaders.AUTHORIZATION, tokens.get((tokenCount + index) % tokens.size()))
                 .retrieve()
                 .bodyToMono(JSONObject.class)
                 .map(response -> response.get("data", JSONObject.class)
@@ -194,7 +216,7 @@ public class DeepSeekService implements DialogService {
     @Override
     public void doOnComplete(Integer index) {
         if (index == null) return;
-        String key = "DeepSeek:" + tokens.get(tokenCount);
+        String key = "DeepSeek:" + tokens.get((tokenCount + index) % tokens.size());
         redisTemplate.opsForHash()
                 .get(key, FinalNumber.DEEPSEEK_SESSION_ID + index)
                 .flatMap(sessionId ->
@@ -218,10 +240,10 @@ public class DeepSeekService implements DialogService {
     @Override
     public Flux<Map<String, Object>> doOnBefore(Map<String, Object> requestBody, Integer index) {
         // 创建会话id
-        return createSessionId()
+        return createSessionId(index)
                 .flatMap(sessionId -> {
                     log.info("成功创建会话id:{}", sessionId);
-                    String key = "DeepSeek:" + tokens.get(tokenCount);
+                    String key = "DeepSeek:" + tokens.get((tokenCount + index) % tokens.size());
                     requestBody.put("chat_session_id", sessionId);
                     return redisTemplate.opsForHash()
                             .put(key, FinalNumber.DEEPSEEK_SESSION_ID + index, sessionId)
@@ -235,7 +257,7 @@ public class DeepSeekService implements DialogService {
     }
 
     @Override
-    public void sendOnBefore(DialogInputDTO dialogInputDTO) {
+    public void sendOnComplete() {
         tokenCount = ++tokenCount % tokens.size();
     }
 }

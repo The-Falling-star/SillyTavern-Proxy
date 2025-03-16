@@ -43,6 +43,7 @@ public class ZaiWenService implements DialogService {
 
     @Override
     public DialogVO notStreamResponseToDialogVO(Integer index, String data) {
+        // 因为这个网站只能流式返回数据,因此处理方式和流式数据处理方式一样
         return streamResponseToDialogVO(index,data);
     }
 

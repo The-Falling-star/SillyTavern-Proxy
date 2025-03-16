@@ -1,6 +1,7 @@
 package com.ling.sillytavernproxy.service;
 
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
+import com.ling.sillytavernproxy.entity.Message;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
 import org.slf4j.Logger;
@@ -14,10 +15,7 @@ import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public interface DialogService {
 
@@ -27,19 +25,21 @@ public interface DialogService {
 
     /**
      * 核心方法,发送对话
+     *
      * @param dialogInputDTO SillyTavern输入的请求体
      * @return 返回流式的DialogVO数据
      */
     default Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
         WebClient webClient = getWebClient();
         Map<String, ?> body = inputToRequestBody(dialogInputDTO);
-        if (dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() < 1) dialogInputDTO.setReplyNum(1);
-        log.info("开始请求");
+        int replyNum = dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() == 0 ?
+                1 : dialogInputDTO.getReplyNum();
+
         sendOnBefore(dialogInputDTO);
 
-        Flux<DialogVO> flux = Flux.range(0, dialogInputDTO.getReplyNum())
+        Flux<DialogVO> flux = Flux.range(0, replyNum)
                 .flatMap(index -> doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
-                        .flatMap(requestBody -> getHttpHeaders()
+                        .flatMap(requestBody -> getHttpHeaders(requestBody,index)
                                 .flatMap(headers -> {
                                     WebClient.RequestBodyUriSpec request = webClient.post();
 
@@ -47,7 +47,7 @@ public interface DialogService {
                                         headers.forEach((headerName, headerValue) -> request.header(headerName, headerValue.toArray(new String[0])));
                                     }
 
-                                    log.info("开始第{}次请求",index);
+                                    log.info("开始第{}次请求", index);
                                     // 设置一些请求信息并请求
                                     Flux<String> response = request.uri(getUrl())
                                             .bodyValue(requestBody)
@@ -57,7 +57,7 @@ public interface DialogService {
                                             .bodyToFlux(DataBuffer.class)
                                             .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
                                             .map(buffer -> {
-                                                log.info("接收到第{}个对话的回复:{}",index,buffer.toString(StandardCharsets.UTF_8));
+                                                log.info("接收到第{}个对话的回复:{}", index, buffer.toString(StandardCharsets.UTF_8));
                                                 try {
                                                     return buffer.toString(StandardCharsets.UTF_8);
                                                 } finally {
@@ -66,13 +66,12 @@ public interface DialogService {
                                             })
                                             .doOnComplete(() -> doOnComplete(index));
 
-                                    return dialogInputDTO.isStream() ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
-                                            response.collect(Collectors.joining())
-                                                    .map(data -> this.notStreamResponseToDialogVO(index, data))
-                                                    .flux();
+                                    // 部分网站的流式数据和非流式数据返回格式不同,因此对于不同的处理方法
+                                    return isStream(dialogInputDTO) ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
+                                            response.map(data -> this.notStreamResponseToDialogVO(index, data));
                                 })));
 
-        // 如果非流式回复,则将所有回复都收集起来
+        // 如果SillyTavern要求非流式回复,则将所有回复都收集起来统一返回
         if (!dialogInputDTO.isStream()) {
             /*
             collectList()返回的类型为Mono<List<DialogVO>>
@@ -80,12 +79,26 @@ public interface DialogService {
             */
             flux = flux.collectList().map(dialogVOS -> {
                         // 将List内的每个DialogVO的对话内容全部提取出来,放到ret的choice数组里
-                        DialogVO ret = new DialogVO(new ArrayList<>(dialogInputDTO.getReplyNum()));
+                        DialogVO result = new DialogVO(new ArrayList<>(Collections.nCopies(replyNum, null)));
+                        Map<Integer,StringBuilder> map = new HashMap<>(replyNum);
+
+                        // 根据map来区分对话属于哪一个index
                         dialogVOS.forEach(dialogVO -> {
-                            CommonReplyVO commonReplyVO = (CommonReplyVO) dialogVO.getChoices().getFirst();
-                            ret.getChoices().add(commonReplyVO);// TODO 这里后续要按照index设置对话
+                            Integer key = dialogVO.getChoices().getFirst().getIndex();
+                            StringBuilder content = map.computeIfAbsent(key, k -> new StringBuilder());
+
+                            // 因为按先后顺序插入的,所以直接拼接就好
+                            if (dialogVO.getChoices().getFirst() instanceof CommonReplyVO commonReplyVO)
+                                content.append(commonReplyVO.getMessage().getContent());
                         });
-                        return ret;
+
+                        // 将对话放入结果的数组里
+                        map.forEach((key, value) -> {
+                            Message message = new Message("assistant", value.toString());
+                            CommonReplyVO commonReplyVO = new CommonReplyVO(message, key, false);
+                            result.getChoices().set(key,commonReplyVO);
+                        });
+                        return result;
                     })
                     .flux();
         }
@@ -128,8 +141,7 @@ public interface DialogService {
     /**
      * 在每次请求结束后要做的事情,如请求删除对话框
      */
-    default void doOnComplete(Integer index) {
-    }
+    default void doOnComplete(Integer index) {}
 
     /**
      * 自定义webClient
@@ -141,7 +153,10 @@ public interface DialogService {
     }
 
     /**
-     * 确定对第三方api是否为流式回复
+     * 确定对第三方api是否为流式回复,
+     * dialogInputDTO中的isStream是给SillyTavern看的,
+     * 这个isStream是给第三方api看的,指示第三方api是否需要流式回复
+     * 比如有一些镜像网站只能流式回复,那么这里就只能返回true
      *
      * @param dialogInputDTO 输入对象
      * @return 如果需要第三方api流式返回则返回true
@@ -163,15 +178,14 @@ public interface DialogService {
      *
      * @return HttpHeaders对象
      */
-    default Flux<HttpHeaders> getHttpHeaders() {
+    default Flux<HttpHeaders> getHttpHeaders(Map<String,Object> requestBody, Integer index) {
         return Flux.just(new HttpHeaders());
     }
 
     /**
      * 在总请求之前需要做的事情
      */
-    default void sendOnBefore(DialogInputDTO dialogInputDTO) {
-    }
+    default void sendOnBefore(DialogInputDTO dialogInputDTO) {}
 
     /**
      * 在总请求之后需要做的事情

@@ -20,13 +20,27 @@ SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某�
 ### 推荐使用docker部署
 
 #### docker部署方法
+
+#### 安装docker(如果你已经安装了,可以跳过)
+```bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+```
+
+#### 拉取项目相关文件
 ```bash
 # 下载打包好的文件
 wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/SillyTavernProxy.jar
 
+# 下载docker相关文件文件
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/docker-compose.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/Dockerfile
+
 # 下载配置文件
 wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
-
+```
+#### 启动项目
+``` bash
 # 后台启动项目
 docker-compose up -d --build
 

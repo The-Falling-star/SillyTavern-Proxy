@@ -62,7 +62,7 @@ public class DeepSeekService implements DialogService {
     public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         DeepSeekRequestBody requestBody = new DeepSeekRequestBody();
         // 会话id在doOnBefore设置,因为多次请求的话会话id是不一样的
-        requestBody.setPrompt(JSONUtil.toJsonStr(/*dialogInputDTO.getMessages()*/"区块链是什么,存在的意义是什么,历史发展大概是怎么样的呢"));
+        requestBody.setPrompt(JSONUtil.toJsonStr(dialogInputDTO.getMessages()));
         return BeanUtil.beanToMap(requestBody, true, false);// 大坑,不能忽略null值
     }
 

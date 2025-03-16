@@ -55,7 +55,7 @@ public interface DialogService {
                                             .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
                                             .retrieve()
                                             .bodyToFlux(DataBuffer.class)
-                                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
+                                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 2 : 5))
                                             .map(buffer -> {
                                                 log.info("接收到第{}个对话的回复:{}", index, buffer.toString(StandardCharsets.UTF_8));
                                                 try {
@@ -64,7 +64,13 @@ public interface DialogService {
                                                     DataBufferUtils.release(buffer); // 必须显式释放
                                                 }
                                             })
-                                            .doOnComplete(() -> doOnComplete(index));
+                                            .doOnComplete(() -> doOnComplete(index))
+                                            .doOnError((throwable) -> {
+                                                log.error("出错了,错误信息是:{}",throwable.getMessage());
+                                                doOnComplete(index);
+                                            })
+                                            .onErrorComplete();
+
 
                                     // 部分网站的流式数据和非流式数据返回格式不同,因此对于不同的处理方法
                                     return isStream(dialogInputDTO) ? response.map(data -> this.streamResponseToDialogVO(index, data)) :

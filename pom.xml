@@ -10,7 +10,6 @@
     </parent>
     <groupId>com.ling</groupId>
     <artifactId>SillyTavernProxy</artifactId>
-    <version>1.0</version>
     <name>SillyTavernProxy</name>
     <description>SillyTavernProxy</description>
     <url/>
@@ -67,6 +66,7 @@
     </dependencies>
 
     <build>
+        <finalName>SillyTavernProxy</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

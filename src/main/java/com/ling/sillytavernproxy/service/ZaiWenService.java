@@ -32,7 +32,6 @@ public class ZaiWenService implements DialogService {
 
     @Override
     public DialogVO streamResponseToDialogVO(Integer index, String data) {
-        log.info("第{}对话:{}",index,data);
         List<ReplyVO> replyVOs = new LinkedList<>();
         Message message = new Message();
         message.setContent(data);

@@ -15,7 +15,7 @@ SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某�
 
 **作者不承担任何责任:** 对于因使用本项目导致的任何直接或间接损失，包括但不限于数据丢失、服务中断、法律纠纷等，作者概不负责。
 
-## 部署和使用
+## Linux端部署和使用
 
 ### 推荐使用docker部署
 
@@ -63,11 +63,25 @@ docker-compose up -d --build
 ### 直接部署
 
 #### 前置条件
-*   Java 21 或更高版本
+*   Java 21 或更高版本(如果没有安装java,请自行上网查找java21的安装教程)
 *   Maven (用于构建项目,如果下载好jar包则不需要)
 *   部分模型要求安装redis,否则无法正常运行
 
-### 构建项目 (如果是自己下载好了jar包则跳过)
+#### 安装Java21 (如果已经安装则跳过)
+```bash
+sudo apt update
+sudo apt install openjdk-21-jdk
+
+# 验证是否安装成功,如果显示类似openjdk version "21.0.0"的信息说明成功
+java -version
+```
+
+#### 安装redis (如果已经安装则跳过)
+```bash
+sudo apt install redis-server
+```
+
+#### 构建项目 (如果是自己下载好了jar包则跳过)
 
 1.  克隆项目代码：
 
@@ -85,7 +99,7 @@ docker-compose up -d --build
     构建成功后，在 `target/` 目录下会生成可执行的 JAR 文件。
 
 
-### 配置项目
+#### 配置项目
 ```bash
 # 下载配置文件
 wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
@@ -117,9 +131,105 @@ spring:
       port: 6379 # 在此处填入你的redis端口
 ```
 
-### 运行项目 (以下两条指令二选一执行)
+#### 运行项目 
 
 ```bash
+#启动redis
+nohup redis-server &
+
+# 以下两条指令二选一执行
+# 如果你是从github直接下载的jar包(即跳过了构建项目的步骤)
+java -jar SillyTavernProxy.jar
+
+# 如果你是自行构建的项目
+java -jar target/SillyTavernProxy.jar
+```
+
+## Windows部署和使用
+### 推荐使用docker部署
+### docker部署教程
+> 前往 https://www.docker.com/ 下载docker安装包并安装(可能需要科学上网)
+> 
+> 前往 https://github.com/The-Falling-star/SillyTavernProxy/releases 下载application.yml,SillyTavernProxy.jar,Dockerfile,docker-compose.yml四个文件,并放在同一目录下
+>
+> 按照上述Linux环境部署教程以获取token,打开application.yml,在对应的位置填入你的token
+> 
+> 打开刚安装好的 Docker Desktop,在刚才下载的四个文件的目录下打开cmd,输入`docker-compose --build`启动项目
+
+### 直接部署
+> 自行上网搜索安装Java 21的教程来安装Java 21
+> 
+> 自行上网搜索安装Windows版的redis来安装redis
+> 
+> 前往 https://github.com/The-Falling-star/SillyTavernProxy/releases 下载application.yml,SillyTavernProxy.jar两个文件,并放在同一目录下
+>
+> 按照上述Linux环境部署教程以获取token,打开application.yml,在对应的位置填入你的token
+>
+> 随后输入以下指令启动项目
+ ```bash
+# 启动redis
+redis-server
+
+# 启动项目
+java -jar SillyTavernProxy.jar
+```
+
+## 安卓端部署
+### 前置条件
+* 手机已经安装好了Termux
+* Termux里已经安装好了ubuntu系统
+
+#### 安装Java21 (如果已经安装则跳过)
+```bash
+sudo apt update
+sudo apt install openjdk-21-jdk
+
+# 验证是否安装成功,如果显示类似openjdk version "21.0.0"的信息说明成功
+java -version
+```
+
+#### 安装redis (如果已经安装则跳过)
+```bash
+sudo apt install redis-server
+```
+
+#### 配置项目
+```bash
+# 下载配置文件
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
+
+# 按照上述Linux环境部署教程以获取token
+# 打开配置文件,并在对应位置填入你的token,并配置redis
+vim application.yml
+```
+#### 填入token,示例:
+```yaml
+deepseek:
+  tokens:
+    - Bearer your deepseek token1
+    - Bearer your deepseek token2
+```
+
+#### 配置redis
+```yaml
+spring:
+  codec:
+    max-in-memory-size: 20MB
+  profiles:
+    active: dev
+  data:
+    redis:
+      host: 127.0.0.1 # 在此处填入你的redis地址
+      port: 6379 # 在此处填入你的redis端口
+```
+
+### 运行项目
+
+```bash
+#启动redis
+nohup redis-server &
+
+# 以下两条指令二选一执行
 # 如果你是从github直接下载的jar包(即跳过了构建项目的步骤)
 java -jar SillyTavernProxy.jar
 
@@ -129,7 +239,7 @@ java -jar target/SillyTavernProxy.jar
 
 默认端口是52006
 
-### SillyTavern配置教程
+## SillyTavern配置教程
 #### 1.进行代理配置
 <img src="./images/teach01.png" alt="teach01">
 

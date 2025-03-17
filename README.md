@@ -3,7 +3,7 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)]
 ## 项目简介
 
-SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某些 AI 镜像网站的接口，为用户提供无需API密钥即可体验SillyTavern功能的方式。目前暂时仅支持两个AI镜像网站
+SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某些 AI 镜像网站的接口，为用户提供无需API密钥即可体验SillyTavern功能的方式。目前暂时仅支持deepseek和在问两个AI镜像网站
 
 ## 免责声明
 
@@ -67,7 +67,7 @@ docker-compose up -d --build
 *   Maven (用于构建项目,如果下载好jar包则不需要)
 *   部分模型要求安装redis,否则无法正常运行
 
-#### 安装Java21 (如果已经安装则跳过)
+#### 安装Java 21 (如果已经安装则跳过)
 ```bash
 sudo apt update
 sudo apt install openjdk-21-jdk
@@ -107,7 +107,7 @@ wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0
 # 打开配置文件
 vim application.yml
 ```
-#### 进入一个AI镜像网站,按下F12打开开发者工具,找到`token`
+#### 进入一个deepseek官网,按下F12打开开发者工具,找到`token`
 <img src="./images/teach04.png" alt="teach04">
 
 #### 随后在tokens中填入你的token,支持多个token,示例:

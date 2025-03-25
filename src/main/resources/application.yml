@@ -21,6 +21,10 @@ wen-xiao-bai:
 deepseek:
   tokens:
     - Bearer your deepseek token
+gemini:
+  Apis:
+    - your gemini API
+    - your gemini API
 
 debug: true
 

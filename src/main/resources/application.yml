@@ -22,5 +22,5 @@ deepseek:
   tokens:
     - Bearer your deepseek token
 
-debug: false
+debug: true
 

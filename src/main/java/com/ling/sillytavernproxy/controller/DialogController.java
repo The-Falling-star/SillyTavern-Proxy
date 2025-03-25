@@ -2,7 +2,8 @@ package com.ling.sillytavernproxy.controller;
 
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.entity.CommonResponse;
-import com.ling.sillytavernproxy.entity.Model;
+import com.ling.sillytavernproxy.enums.Model;
+import com.ling.sillytavernproxy.exception.UnknownModelException;
 import com.ling.sillytavernproxy.service.DialogService;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import lombok.AllArgsConstructor;
@@ -16,8 +17,6 @@ import reactor.core.publisher.Flux;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import static com.ling.sillytavernproxy.config.FinalNumber.*;
 
 @RestController
 @Slf4j
@@ -33,10 +32,10 @@ public class DialogController {
      */
     @GetMapping("/models")
     public CommonResponse status(){
-        List<Model> models = new LinkedList<>();
-        models.add(new Model(MODEL_ZAI_WEN_DEEPSEEK));
-        models.add(new Model(MODEL_WEN_XIAO_BAI_DEEPSEEK));
-        models.add(new Model(MODEL_DEEPSEEK));
+        List<Map<String,Model>> models = new LinkedList<>();
+        for (Model model : Model.values()) {
+            models.add(Map.of("id",model));
+        }
         return new CommonResponse(models);
     }
 
@@ -46,10 +45,13 @@ public class DialogController {
         else serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_NDJSON);
 
         return switch (dialogInputDTO.getModel()){
-            case MODEL_ZAI_WEN_DEEPSEEK -> dialogService.get("zaiWenService").sendDialog(dialogInputDTO);
-            case MODEL_WEN_XIAO_BAI_DEEPSEEK -> dialogService.get("wenXiaoBaiService").sendDialog(dialogInputDTO);
-            case MODEL_DEEPSEEK -> dialogService.get("deepSeekService").sendDialog(dialogInputDTO);
-            default -> throw new RuntimeException("未知模型");
+            case ZAI_WEN_DEEPSEEK -> dialogService.get("zaiWenService").sendDialog(dialogInputDTO);
+            case DEEPSEEK -> dialogService.get("deepSeekService").sendDialog(dialogInputDTO);
+            default -> {
+                if (dialogInputDTO.getModel().getId().contains("gemini"))
+                    yield dialogService.get("geminiService").sendDialog(dialogInputDTO);
+                else throw new UnknownModelException(dialogInputDTO.getModel().getId());
+            }
         };
     }
 

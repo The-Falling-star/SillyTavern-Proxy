@@ -21,12 +21,10 @@ import java.util.Map;
 @AllArgsConstructor
 public class ZaiWenService implements DialogService {
 
-    Map<String,String> models;
-
     @Override
     public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         ZaiWenRequestBody requestBody = new ZaiWenRequestBody(dialogInputDTO);
-        requestBody.setMode(models.get(dialogInputDTO.getModel()));
+        requestBody.setMode(dialogInputDTO.getModel().getOut());
         return BeanUtil.beanToMap(requestBody);
     }
 
@@ -47,7 +45,7 @@ public class ZaiWenService implements DialogService {
     }
 
     @Override
-    public String getUrl() {
+    public String getUrl(DialogInputDTO dialogInputDTO) {
         return FinalNumber.ZAI_WEN_URL + "/chatbot";
     }
 

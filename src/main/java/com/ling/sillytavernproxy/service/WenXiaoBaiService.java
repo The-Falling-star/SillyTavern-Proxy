@@ -6,6 +6,7 @@ import com.ling.sillytavernproxy.config.FinalNumber;
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.entity.Message;
 import com.ling.sillytavernproxy.entity.WenXiaoBai.WenXiaoBaiRequestBody;
+import com.ling.sillytavernproxy.enums.Model;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
 import lombok.extern.slf4j.Slf4j;
@@ -23,12 +24,9 @@ import java.util.Map;
 @Slf4j
 public class WenXiaoBaiService implements DialogService {
 
-    Map<String, String> models;
-
     WebClient webClient;
 
-    public WenXiaoBaiService(Map<String, String> models) {
-        this.models = models;
+    public WenXiaoBaiService() {
         webClient = WebClient
                 .builder()
                 .defaultHeader("X-Yuanshi-Authorization", FinalNumber.getXiaoBaiToken())
@@ -38,8 +36,8 @@ public class WenXiaoBaiService implements DialogService {
     @Override
     public Map<String, Object> inputToRequestBody(DialogInputDTO dialogInputDTO) {
         WenXiaoBaiRequestBody wenXiaoBaiRequestBody = new WenXiaoBaiRequestBody();
-        wenXiaoBaiRequestBody.setBotId(models.get(dialogInputDTO.getModel()));
-        wenXiaoBaiRequestBody.setConversationId(createConversation(Integer.parseInt(models.get("deepseek-wenXiaoBai"))));
+        wenXiaoBaiRequestBody.setBotId(dialogInputDTO.getModel().getOut());
+        wenXiaoBaiRequestBody.setConversationId(createConversation(Integer.parseInt(Model.WEN_XIAO_BAI_DEEPSEEK.getOut())));
         wenXiaoBaiRequestBody.setTurnIndex(0);
         wenXiaoBaiRequestBody.setQuery(JSONUtil.toJsonStr(dialogInputDTO.getMessages()));
         return BeanUtil.beanToMap(wenXiaoBaiRequestBody);
@@ -59,7 +57,7 @@ public class WenXiaoBaiService implements DialogService {
     }
 
     @Override
-    public String getUrl() {
+    public String getUrl(DialogInputDTO dialogInputDTO) {
         return FinalNumber.XIAO_BAI_URL + "/chat/v1";
     }
 

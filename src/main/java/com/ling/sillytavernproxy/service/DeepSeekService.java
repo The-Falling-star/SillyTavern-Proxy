@@ -140,7 +140,7 @@ public class DeepSeekService implements DialogService {
     }
 
     @Override
-    public String getUrl() {
+    public String getUrl(DialogInputDTO dialogInputDTO) {
         return "https://chat.deepseek.com/api/v0/chat/completion";
     }
 

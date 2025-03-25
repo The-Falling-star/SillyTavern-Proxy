@@ -11,11 +11,16 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Flux;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public interface DialogService {
 
@@ -39,7 +44,7 @@ public interface DialogService {
 
         Flux<DialogVO> flux = Flux.range(0, replyNum)
                 .flatMap(index -> doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
-                        .flatMap(requestBody -> getHttpHeaders(requestBody,index)
+                        .flatMap(requestBody -> getHttpHeaders(requestBody, index)
                                 .flatMap(headers -> {
                                     WebClient.RequestBodyUriSpec request = webClient.post();
 
@@ -49,7 +54,7 @@ public interface DialogService {
 
                                     log.info("开始第{}次请求", index);
                                     // 设置一些请求信息并请求
-                                    Flux<String> response = request.uri(getUrl())
+                                    Flux<String> response = request.uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO))
                                             .bodyValue(requestBody)
                                             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                                             .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
@@ -66,7 +71,7 @@ public interface DialogService {
                                             })
                                             .doOnComplete(() -> doOnComplete(index))
                                             .doOnError((throwable) -> {
-                                                log.error("出错了,错误信息是:{}",throwable.getMessage());
+                                                log.error("出错了,错误信息是:{}", throwable.getMessage());
                                                 doOnComplete(index);
                                             })
                                             .onErrorComplete();
@@ -86,7 +91,7 @@ public interface DialogService {
             flux = flux.collectList().map(dialogVOS -> {
                         // 将List内的每个DialogVO的对话内容全部提取出来,放到ret的choice数组里
                         DialogVO result = new DialogVO(new ArrayList<>(Collections.nCopies(replyNum, null)));
-                        Map<Integer,StringBuilder> map = new HashMap<>(replyNum);
+                        Map<Integer, StringBuilder> map = new HashMap<>(replyNum);
 
                         // 根据map来区分对话属于哪一个index
                         dialogVOS.forEach(dialogVO -> {
@@ -102,7 +107,7 @@ public interface DialogService {
                         map.forEach((key, value) -> {
                             Message message = new Message("assistant", value.toString());
                             CommonReplyVO commonReplyVO = new CommonReplyVO(message, key, false);
-                            result.getChoices().set(key,commonReplyVO);
+                            result.getChoices().set(key, commonReplyVO);
                         });
                         return result;
                     })
@@ -142,12 +147,13 @@ public interface DialogService {
      *
      * @return 第三方ai的请求url
      */
-    String getUrl();
+    String getUrl(DialogInputDTO dialogInputDTO);
 
     /**
      * 在每次请求结束后要做的事情,如请求删除对话框
      */
-    default void doOnComplete(Integer index) {}
+    default void doOnComplete(Integer index) {
+    }
 
     /**
      * 自定义webClient
@@ -184,18 +190,23 @@ public interface DialogService {
      *
      * @return HttpHeaders对象
      */
-    default Flux<HttpHeaders> getHttpHeaders(Map<String,Object> requestBody, Integer index) {
+    default Flux<HttpHeaders> getHttpHeaders(Map<String, Object> requestBody, Integer index) {
         return Flux.just(new HttpHeaders());
     }
 
     /**
      * 在总请求之前需要做的事情
      */
-    default void sendOnBefore(DialogInputDTO dialogInputDTO) {}
+    default void sendOnBefore(DialogInputDTO dialogInputDTO) {
+    }
 
     /**
      * 在总请求之后需要做的事情
      */
     default void sendOnComplete() {
+    }
+
+    default URI getUriParam(UriBuilder uriBuilder, DialogInputDTO dialogInputDTO) {
+        return uriBuilder.build();
     }
 }

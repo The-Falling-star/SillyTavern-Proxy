@@ -2,6 +2,7 @@ package com.ling.sillytavernproxy.service;
 
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.entity.Message;
+import com.ling.sillytavernproxy.exception.TokenExpireException;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 public interface DialogService {
 
@@ -43,7 +45,7 @@ public interface DialogService {
         this.sendOnBefore(dialogInputDTO);
 
         Flux<DialogVO> flux = Flux.range(0, replyNum)
-                .flatMap(index -> this.doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
+                .flatMap(index -> this.doOnBefore(new HashMap<>(body), index)// 对每次请求的请求体做一个自定义前置操作
                         .flatMap(requestBody -> this.getHttpHeaders(requestBody, index)
                                 .flatMap(headers -> {
                                     WebClient.RequestBodyUriSpec request = webClient.post();
@@ -70,9 +72,29 @@ public interface DialogService {
                                                 }
                                             })
                                             .doOnComplete(() -> doOnComplete(index))
-                                            .doOnError((throwable) -> {
+                                            .onErrorResume(TimeoutException.class, throwable -> {
+                                                log.error("请求超时了,是不是没开梯子?\n异常信息:{}", throwable.getMessage());
+                                                return Flux.error(throwable);
+                                            })
+                                            .onErrorResume(TokenExpireException.class, throwable -> {
+                                                if (
+                                                        headers == null ||
+                                                        headers.get(this.getAuthorization()) == null ||
+                                                        headers.get(this.getAuthorization()).isEmpty())
+                                                {
+                                                    log.error("没有token,是不是忘记配置啦?");
+                                                }
+                                                else {
+                                                    log.error("token:{}过期了,重新抓取吧.\n异常信息:{}",
+                                                            headers.get(this.getAuthorization()).getFirst(),
+                                                            throwable.getMessage());
+                                                    throwable.setToken(headers.get(this.getAuthorization()).getFirst());
+                                                }
+                                                return Flux.error(throwable);
+                                            })
+                                            .onErrorResume((throwable) -> {
                                                 log.error("出错了,错误信息是:{}", throwable.getMessage());
-                                                this.doOnComplete(index);
+                                                return Flux.error(throwable);
                                             })
                                             .onErrorComplete();
 
@@ -207,5 +229,12 @@ public interface DialogService {
 
     default URI getUriParam(UriBuilder uriBuilder, DialogInputDTO dialogInputDTO) {
         return uriBuilder.build();
+    }
+
+    /**
+     * 获取Token的请求头的键名称
+     */
+    default String getAuthorization() {
+        return "Authorization";
     }
 }

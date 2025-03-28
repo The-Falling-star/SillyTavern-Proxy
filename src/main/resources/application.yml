@@ -13,10 +13,10 @@ spring:
       host: redis
       port: 6379
 
-wen-xiao-bai:
-  user-id: 128824
-  tokens:
-    - Braser your wen xiao bai tokens
+#wen-xiao-bai:
+#  user-id: 128824
+#  tokens:
+#    - Bearer your wen xiao bai tokens
 
 deepseek:
   tokens:

@@ -8,6 +8,7 @@ import com.ling.sillytavernproxy.dto.DialogInputDTO;
 import com.ling.sillytavernproxy.entity.DeepSeek.DeepSeekRequestBody;
 import com.ling.sillytavernproxy.entity.DeepSeek.PowChallenge;
 import com.ling.sillytavernproxy.entity.Message;
+import com.ling.sillytavernproxy.exception.TokenExpireException;
 import com.ling.sillytavernproxy.properties.DeepSeekProperty;
 import com.ling.sillytavernproxy.util.DeepSeekHashV1;
 import com.ling.sillytavernproxy.vo.DialogVO;
@@ -56,6 +57,12 @@ public class DeepSeekService implements DialogService {
         tokenCount = 0;
         this.redisTemplate = redisTemplate;
         tokens = deepSeekProperty.getTokens() == null ? new ArrayList<>() : deepSeekProperty.getTokens();
+
+        // Bearer 开头
+        for (int i = tokens.size() - 1; i >= 0; i--) {
+            String token = tokens.get(i);
+            if (!token.startsWith("Bearer ")) tokens.add(i,"Bearer " + token);
+        }
     }
 
     @Override
@@ -170,9 +177,16 @@ public class DeepSeekService implements DialogService {
                 .header(HttpHeaders.AUTHORIZATION, tokens.get((tokenCount + index) % tokens.size()))
                 .retrieve()
                 .bodyToFlux(JSONObject.class)
-                .map(response -> response.get("data", JSONObject.class)
-                        .get("biz_data", JSONObject.class)
-                        .get("id", String.class));
+                .handle((response, sink) -> {
+                    log.info(response.toString());
+                    if(response.get("code", Integer.class) == 40003) {
+                        sink.error(new TokenExpireException(tokens.get((tokenCount + index) % tokens.size())));
+                        return;
+                    }
+                    sink.next(response.get("data", JSONObject.class)
+                            .get("biz_data", JSONObject.class)
+                            .get("id", String.class));
+                });
     }
 
     @Override

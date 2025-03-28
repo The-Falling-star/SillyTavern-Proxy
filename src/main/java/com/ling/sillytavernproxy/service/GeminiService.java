@@ -44,22 +44,24 @@ public class GeminiService implements DialogService {
 
     @Override
     public Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
-        // 流式生成多个备选回复的话则需要调用默认实现进行多次调用接口了
-        if (dialogInputDTO.isStream() && dialogInputDTO.getReplyNum() != null && dialogInputDTO.getReplyNum() > 1) {
-            return DialogService.super.sendDialog(dialogInputDTO);
-        }
+        log.info("开始请求");
+        Integer n = dialogInputDTO.getReplyNum();
+
+        // 流式生成多个备选回复的话则需要多次调用接口了
+        if (dialogInputDTO.isStream() && n != null && n > 1) dialogInputDTO.setReplyNum(1);
+        else n = 1;
 
         Map<String, ?> body = inputToRequestBody(dialogInputDTO);
-        log.info("开始请求");
-        return webClient.post()
-                .uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO))
-                .bodyValue(body)
-                .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToFlux(GenerateContentResponse.class)
-                .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
-                .map(this::bodyToDialogVO)
-                .doOnError(WebClientResponseException.class, e -> log.error("出错了,返回的错误响应体为:{}", e.getResponseBodyAsString()));
+        return Flux.range(0, n)
+                .flatMap(index -> webClient.post()
+                        .uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO))
+                        .bodyValue(body)
+                        .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
+                        .retrieve()
+                        .bodyToFlux(GenerateContentResponse.class)
+                        .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
+                        .map(response -> isStream(dialogInputDTO) ? streamBodyToDialogVO(response,index) : bodyToDialogVO(response))
+                        .doOnError(WebClientResponseException.class, e -> log.error("出错了,返回的错误响应体为:{}", e.getResponseBodyAsString())));
     }
 
     @Override
@@ -77,11 +79,8 @@ public class GeminiService implements DialogService {
         geminiRequestBody.setContents(contents);
         geminiRequestBody.setSystem_instruction(new SystemInstruction(parts));
 
-        // 如果是生成多个流式备选回复,那么就需要将请求生成备选回复的参数改为1,否则gemini报错
-        Integer replyNum = dialogInputDTO.getReplyNum();
-        if(isStream(dialogInputDTO)) dialogInputDTO.setReplyNum(1);
+        if (isStream(dialogInputDTO)) dialogInputDTO.setReplyNum(1);
         GenerationConfig generationConfig = new GenerationConfig(dialogInputDTO);
-        dialogInputDTO.setReplyNum(replyNum);
 
         geminiRequestBody.setGenerationConfig(generationConfig);
         return BeanUtil.beanToMap(geminiRequestBody);
@@ -89,7 +88,6 @@ public class GeminiService implements DialogService {
 
     @Override
     public DialogVO streamResponseToDialogVO(Integer index, String data) {
-        data = data.substring(5); // 去除前缀 data:
         GenerateContentResponse response = JSONUtil.toBean(data, GenerateContentResponse.class);
         return streamBodyToDialogVO(response, index);
     }
@@ -125,6 +123,7 @@ public class GeminiService implements DialogService {
 
     /**
      * 非流式回复片段转换为DilogVO
+     *
      * @param response gemini回复的信息
      */
     private DialogVO bodyToDialogVO(GenerateContentResponse response) {
@@ -141,8 +140,9 @@ public class GeminiService implements DialogService {
 
     /**
      * 流式回复片段转换为DilogVO
+     *
      * @param response gemini回复的信息
-     * @param index 第index个对话
+     * @param index    第index个对话
      */
     private DialogVO streamBodyToDialogVO(GenerateContentResponse response, int index) {
         log.info("接收到来自gemini的第{}个对话的回复:{}", index, JSONUtil.toJsonStr(response));
@@ -156,8 +156,9 @@ public class GeminiService implements DialogService {
 
     /**
      * 构造DialogVO的辅助函数,减少重复代码
-     * @param index 属于第几个对话的回复
-     * @param replyVOS DialogVO的choice数组
+     *
+     * @param index     属于第几个对话的回复
+     * @param replyVOS  DialogVO的choice数组
      * @param candidate 回复信息
      */
     private void constructDialogVO(ArrayList<ReplyVO> replyVOS, Candidate candidate, int index) {

@@ -2,6 +2,7 @@ package com.ling.sillytavernproxy.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.ling.sillytavernproxy.config.FinalNumber;
 import com.ling.sillytavernproxy.exception.UnknownModelException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,12 +17,14 @@ public enum Model {
     WEN_XIAO_BAI_DEEPSEEK(MODEL_WEN_XIAO_BAI_DEEPSEEK,"200006"),
 
     // 谷歌gemini的模型
-    GEMINI_2_FLASH(MODEL_GEMINI_2_FLASH,MODEL_GEMINI_2_FLASH),
-    GEMINI_2_FLASH_STABLE(MODEL_GEMINI_2_FLASH_STABLE,"gemini-2.0-flash-001"),
-    GEMINI_2_FLASH_EXP( MODEL_GEMINI_2_FLASH_EXP,"gemini-2.0-flash-exp"),
-    GEMINI_2_FLASH_THINKING_EXP (MODEL_GEMINI_2_FLASH_THINKING_EXP, "gemini-2.0-flash-thinking-exp-01-21"),
-    GEMINI_2_PRO_EXP_0205 (MODEL_GEMINI_2_PRO_EXP_0205, "gemini-2.0-pro-exp-02-05"),
-    GEMINI_2_PRO_EXP(MODEL_GEMINI_2_PRO_EXP, "gemini-2.0-pro-exp"),
+    GEMINI_2_FLASH(FinalNumber.MODEL_GEMINI_2_FLASH,FinalNumber.MODEL_GEMINI_2_FLASH),
+    GEMINI_2_FLASH_STABLE(FinalNumber.MODEL_GEMINI_2_FLASH_STABLE,"gemini-2.0-flash-001"),
+    GEMINI_2_FLASH_EXP(FinalNumber.MODEL_GEMINI_2_FLASH_EXP,"gemini-2.0-flash-exp"),
+    GEMINI_2_FLASH_THINKING_EXP_0121(FinalNumber.MODEL_GEMINI_2_FLASH_THINKING_EXP_0121, "gemini-2.0-flash-thinking-exp-01-21"),
+    GEMINI_2_FLASH_THINKING_EXP_1219(MODEL_GEMINI_2FLASH_THINKING_EXP_1219,"gemini-2.0-flash-thinking-exp-1219"),
+    GEMINI_2_PRO_EXP_0205 (FinalNumber.MODEL_GEMINI_2_PRO_EXP_0205, "gemini-2.0-pro-exp-02-05"),
+    GEMINI_2_PRO_EXP(FinalNumber.MODEL_GEMINI_2_PRO_EXP, "gemini-2.0-pro-exp"),
+    GEMINI_2__5_PRO_EXP(MODEL_GEMINI_2__5_PRO_EXP,"gemini-2.5-pro-exp-03-25"),
     UNKNOWN;
 
     @JsonValue

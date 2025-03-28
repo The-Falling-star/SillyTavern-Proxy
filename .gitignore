@@ -4,3 +4,8 @@
 .idea
 .vscode
 /src/main/resources/application-dev.yml
+/data/
+/logs/
+/redis.conf/
+/src/main/resources/static/
+/src/main/resources/templates/

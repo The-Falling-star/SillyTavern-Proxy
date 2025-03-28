@@ -35,16 +35,16 @@ public interface DialogService {
      * @return 返回流式的DialogVO数据
      */
     default Flux<DialogVO> sendDialog(DialogInputDTO dialogInputDTO) {
-        WebClient webClient = getWebClient();
+        WebClient webClient = this.getWebClient();
         Map<String, ?> body = inputToRequestBody(dialogInputDTO);
         int replyNum = dialogInputDTO.getReplyNum() == null || dialogInputDTO.getReplyNum() == 0 ?
                 1 : dialogInputDTO.getReplyNum();
 
-        sendOnBefore(dialogInputDTO);
+        this.sendOnBefore(dialogInputDTO);
 
         Flux<DialogVO> flux = Flux.range(0, replyNum)
-                .flatMap(index -> doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
-                        .flatMap(requestBody -> getHttpHeaders(requestBody, index)
+                .flatMap(index -> this.doOnBefore(new HashMap<>(body), index) // 对每次请求的请求体做一个自定义前置操作
+                        .flatMap(requestBody -> this.getHttpHeaders(requestBody, index)
                                 .flatMap(headers -> {
                                     WebClient.RequestBodyUriSpec request = webClient.post();
 
@@ -54,10 +54,10 @@ public interface DialogService {
 
                                     log.info("开始第{}次请求", index);
                                     // 设置一些请求信息并请求
-                                    Flux<String> response = request.uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO))
+                                    Flux<String> response = request.uri(getUrl(dialogInputDTO), uriBuilder -> this.getUriParam(uriBuilder, dialogInputDTO))
                                             .bodyValue(requestBody)
                                             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                            .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
+                                            .accept(this.isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
                                             .retrieve()
                                             .bodyToFlux(DataBuffer.class)
                                             .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 2 : 5))
@@ -72,14 +72,14 @@ public interface DialogService {
                                             .doOnComplete(() -> doOnComplete(index))
                                             .doOnError((throwable) -> {
                                                 log.error("出错了,错误信息是:{}", throwable.getMessage());
-                                                doOnComplete(index);
+                                                this.doOnComplete(index);
                                             })
                                             .onErrorComplete();
 
 
                                     // 部分网站的流式数据和非流式数据返回格式不同,因此对于不同的处理方法
-                                    return isStream(dialogInputDTO) ? response.map(data -> this.streamResponseToDialogVO(index, data)) :
-                                            response.map(data -> this.notStreamResponseToDialogVO(index, data));
+                                    return this.isStream(dialogInputDTO) ? response.map(data -> streamResponseToDialogVO(index, data)) :
+                                            response.map(data -> notStreamResponseToDialogVO(index, data));
                                 })));
 
         // 如果SillyTavern要求非流式回复,则将所有回复都收集起来统一返回
@@ -113,7 +113,7 @@ public interface DialogService {
                     })
                     .flux();
         }
-        sendOnComplete();
+        this.sendOnComplete();
         return flux;
     }
 
@@ -181,7 +181,6 @@ public interface DialogService {
      * 在每次发送对话前需要做的事情
      */
     default Flux<Map<String, Object>> doOnBefore(Map<String, Object> requestBody, Integer index) {
-        log.info("开始进行doOnBefore");
         return Flux.just(requestBody);
     }
 

@@ -29,7 +29,7 @@ public class WenXiaoBaiService implements DialogService {
     public WenXiaoBaiService() {
         webClient = WebClient
                 .builder()
-                .defaultHeader("X-Yuanshi-Authorization", FinalNumber.getXiaoBaiToken())
+                // .defaultHeader("X-Yuanshi-Authorization", FinalNumber.getXiaoBaiToken())
                 .build();
     }
 

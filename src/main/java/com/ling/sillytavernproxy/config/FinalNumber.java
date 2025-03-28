@@ -8,9 +8,9 @@ public class FinalNumber {
     public static int XIAO_BAI_USERID;
     public static final List<String> XIAO_BAI_TOKENS = new ArrayList<>();
     private static int XIAO_BAI_TOKEN_INDEX = 0;
-    public static String getXiaoBaiToken() {
+    /*public static String getXiaoBaiToken() {
         return XIAO_BAI_TOKENS.get((XIAO_BAI_TOKEN_INDEX++) % XIAO_BAI_TOKENS.size());
-    }
+    }*/
 
     public static final String ZAI_WEN_URL = "https://aliyun.zaiwen.top/admin";
     public static final String DEEPSEEK_TARGET_PATH = "/api/v0/chat/completion";

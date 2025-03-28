@@ -73,12 +73,12 @@
     </dependencies>
 
     <build>
-        <finalName>SillyTavernProxy</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <finalName>${project.name}</finalName>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

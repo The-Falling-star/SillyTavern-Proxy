@@ -17,7 +17,7 @@ for url in $links; do
             fi
         fi
     echo "正在下载: $url"
-    wget --clobber -q --show-progress $url
+    curl -sSL -O -# $url
 done
 echo "所有文件下载完成！"
 

@@ -3,14 +3,9 @@ package com.ling.sillytavernproxy.exception;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
-@AllArgsConstructor
 public class UnknownModelException extends RuntimeException{
-    String model;
-    String message;
-    public UnknownModelException(String model){
-        this.model = model;
-        this.message = "模型:" + model + "暂不支持";
+    public UnknownModelException(){
+        super("请求的模型暂不支持");
     }
 
 }

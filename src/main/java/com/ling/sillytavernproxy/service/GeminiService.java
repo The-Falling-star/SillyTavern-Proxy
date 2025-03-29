@@ -61,7 +61,10 @@ public class GeminiService implements DialogService {
                         .bodyToFlux(GenerateContentResponse.class)
                         .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
                         .map(response -> isStream(dialogInputDTO) ? streamBodyToDialogVO(response,index) : bodyToDialogVO(response))
-                        .doOnError(WebClientResponseException.class, e -> log.error("出错了,返回的错误响应体为:{}", e.getResponseBodyAsString())));
+                        .onErrorResume(WebClientResponseException.class, e -> {
+                            log.error("出错了,返回的错误响应体为:{}", e.getResponseBodyAsString());
+                            return Flux.error(e);
+                        }));
     }
 
     @Override

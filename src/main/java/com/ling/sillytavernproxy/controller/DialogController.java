@@ -45,12 +45,13 @@ public class DialogController {
         else serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_NDJSON);
 
         return switch (dialogInputDTO.getModel()){
+            case UNKNOWN -> Flux.error(new UnknownModelException());
             case ZAI_WEN_DEEPSEEK -> dialogService.get("zaiWenService").sendDialog(dialogInputDTO);
             case DEEPSEEK -> dialogService.get("deepSeekService").sendDialog(dialogInputDTO);
             default -> {
-                if (dialogInputDTO.getModel().getId().contains("gemini"))
+                if (dialogInputDTO.getModel().getId().contains("gemmmini"))
                     yield dialogService.get("geminiService").sendDialog(dialogInputDTO);
-                else throw new UnknownModelException(dialogInputDTO.getModel().getId());
+                else yield Flux.error(new UnknownModelException());
             }
         };
     }

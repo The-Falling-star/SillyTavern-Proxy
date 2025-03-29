@@ -1,6 +1,7 @@
 package com.ling.sillytavernproxy.entity.Gemini.request;
 
 import com.ling.sillytavernproxy.dto.DialogInputDTO;
+import com.ling.sillytavernproxy.enums.Model;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -28,6 +29,8 @@ public class GenerationConfig {
     private Integer logprobs;
     private boolean enableEnhancedCivicAnswers;
 
+    public static final Model[] disablePenaltyModels = {Model.GEMINI_2__5_PRO_EXP,Model.GEMINI_2_FLASH_EXP};
+
     public GenerationConfig(DialogInputDTO dialogInputDTO){
         this.temperature = dialogInputDTO.getTemperature();
         this.topP = dialogInputDTO.getTopP();
@@ -35,11 +38,19 @@ public class GenerationConfig {
                 1 : dialogInputDTO.getReplyNum();
         this.topK = dialogInputDTO.getTopK();
         this.seed = dialogInputDTO.getSeed();
-        this.frequencyPenalty = dialogInputDTO.getFrequencyPenalty();
-        this.presencePenalty = dialogInputDTO.getPresencePenalty();
+        if (enablePenalty(dialogInputDTO)){
+            this.frequencyPenalty = dialogInputDTO.getFrequencyPenalty();
+            this.presencePenalty = dialogInputDTO.getPresencePenalty();
+        }
         this.maxOutputTokens = dialogInputDTO.getMaxTokens();
         this.stopSequences = dialogInputDTO.getStop();
+    }
 
+    private boolean enablePenalty(DialogInputDTO dialogInputDTO){
+        for (Model disablePenaltyModel : disablePenaltyModels) {
+            if (dialogInputDTO.getModel() == disablePenaltyModel) return false;
+        }
+        return true;
     }
 
 }

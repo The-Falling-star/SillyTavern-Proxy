@@ -23,7 +23,7 @@ mkdir sillyTavernProxy
 cd sillyTavernProxy/
 
 # 下载安装脚本
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/install.sh
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/install.sh
 # 执行安装脚本
 bash install.sh
 
@@ -59,14 +59,14 @@ systemctl enable docker
 #### 拉取项目相关文件
 ```bash
 # 下载打包好的文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/SillyTavernProxy.jar
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/SillyTavernProxy.jar
 
 # 下载docker相关文件文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/docker-compose.yml
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/Dockerfile
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/docker-compose.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/Dockerfile
 
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/application.yml
 ```
 #### 启动项目
 ``` bash
@@ -120,7 +120,7 @@ sudo apt install redis-server
 #### 配置项目
 ```bash
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/application.yml
 
 # 打开配置文件
 vim application.yml
@@ -218,7 +218,7 @@ sudo apt install redis-server
 #### 配置项目
 ```bash
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.2/application.yml
 
 # 按照上述Linux环境部署教程以获取token
 # 打开配置文件,并在对应位置填入你的token,并配置redis

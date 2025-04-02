@@ -12,6 +12,7 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Flux;
 
@@ -62,7 +63,7 @@ public interface DialogService {
                                             .accept(this.isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
                                             .retrieve()
                                             .bodyToFlux(DataBuffer.class)
-                                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 2 : 5))
+                                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 3))
                                             .map(buffer -> {
                                                 log.info("接收到第{}个对话的回复:{}", index, buffer.toString(StandardCharsets.UTF_8));
                                                 try {
@@ -71,7 +72,6 @@ public interface DialogService {
                                                     DataBufferUtils.release(buffer); // 必须显式释放
                                                 }
                                             })
-                                            .doOnComplete(() -> doOnComplete(index))
                                             .onErrorResume(TimeoutException.class, throwable -> {
                                                 log.error("请求超时了,是不是没开梯子?\n异常信息:{}", throwable.getMessage());
                                                 return Flux.error(throwable);
@@ -92,7 +92,13 @@ public interface DialogService {
                                                 }
                                                 return Flux.error(throwable);
                                             })
-                                            .onErrorResume((throwable) -> {
+                                            .onErrorResume(WebClientResponseException.class,exception ->{
+                                                log.error("请求出错了,状态码为:{},返回的错误响应体为:{}",
+                                                        exception.getStatusCode(),
+                                                        exception.getResponseBodyAsString());
+                                                return Flux.error(exception);
+                                            })
+                                            .onErrorResume(throwable -> {
                                                 log.error("出错了,错误信息是:{}", throwable.getMessage());
                                                 return Flux.error(throwable);
                                             })
@@ -100,8 +106,18 @@ public interface DialogService {
 
 
                                     // 部分网站的流式数据和非流式数据返回格式不同,因此对于不同的处理方法
-                                    return this.isStream(dialogInputDTO) ? response.map(data -> streamResponseToDialogVO(index, data)) :
-                                            response.map(data -> notStreamResponseToDialogVO(index, data));
+                                    return this.isStream(dialogInputDTO) ?
+                                            response.map(data -> streamResponseToDialogVO(index, data))
+                                                    .onErrorContinue((throwable, data) ->
+                                                            log.error("转换元素出错了,导致出错的元素是:{} 异常信息为:{}",
+                                                            data.toString(),
+                                                            throwable.getMessage()))
+                                                    .doOnComplete(() -> doOnComplete(index)) :
+                                            response.map(data -> notStreamResponseToDialogVO(index, data))
+                                                    .onErrorContinue((throwable, data) ->
+                                                            log.error("非流式转换元素出错了,导致出错的元素是:{} 异常信息为:{}",
+                                                            data.toString(),
+                                                            throwable.getMessage()));
                                 })));
 
         // 如果SillyTavern要求非流式回复,则将所有回复都收集起来统一返回

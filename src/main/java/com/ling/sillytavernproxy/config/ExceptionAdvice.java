@@ -1,5 +1,6 @@
 package com.ling.sillytavernproxy.config;
 
+import com.ling.sillytavernproxy.exception.ResourceExhaustedException;
 import com.ling.sillytavernproxy.exception.TokenExpireException;
 import com.ling.sillytavernproxy.exception.UnknownModelException;
 import com.ling.sillytavernproxy.vo.ErrorResponseVO;
@@ -55,5 +56,13 @@ public class ExceptionAdvice {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.APPLICATION_NDJSON)
                 .body(new ErrorResponseVO(e.getResponseBodyAsString(), e.getStatusCode().value()));
+    }
+
+    @ExceptionHandler(ResourceExhaustedException.class)
+    public ResponseEntity<ErrorResponseVO> resourceExhaustedException(ResourceExhaustedException e) {
+        log.error(e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .contentType(MediaType.APPLICATION_NDJSON)
+                .body(new ErrorResponseVO(e.getMessage()));
     }
 }

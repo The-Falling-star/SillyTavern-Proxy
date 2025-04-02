@@ -12,10 +12,12 @@ import com.ling.sillytavernproxy.entity.Gemini.response.Candidate;
 import com.ling.sillytavernproxy.entity.Gemini.response.GenerateContentResponse;
 import com.ling.sillytavernproxy.entity.Message;
 import com.ling.sillytavernproxy.enums.gemini.FinishReason;
+import com.ling.sillytavernproxy.exception.ResourceExhaustedException;
 import com.ling.sillytavernproxy.properties.GeminiProperty;
 import com.ling.sillytavernproxy.vo.DialogVO;
 import com.ling.sillytavernproxy.vo.reply.CommonReplyVO;
 import com.ling.sillytavernproxy.vo.reply.ReplyVO;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -28,6 +30,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 @Service("geminiService")
 public class GeminiService implements DialogService {
@@ -53,18 +56,30 @@ public class GeminiService implements DialogService {
 
         Map<String, ?> body = inputToRequestBody(dialogInputDTO);
         return Flux.range(0, n)
-                .flatMap(index -> webClient.post()
-                        .uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO))
-                        .bodyValue(body)
-                        .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
-                        .retrieve()
-                        .bodyToFlux(GenerateContentResponse.class)
-                        .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 5))
-                        .map(response -> isStream(dialogInputDTO) ? streamBodyToDialogVO(response,index) : bodyToDialogVO(response))
-                        .onErrorResume(WebClientResponseException.class, e -> {
-                            log.error("出错了,返回的错误响应体为:{}", e.getResponseBodyAsString());
-                            return Flux.error(e);
-                        }));
+                .flatMap(index -> {
+                    String api = getApiKey();
+                    return webClient.post()
+                            .uri(getUrl(dialogInputDTO), uriBuilder -> getUriParam(uriBuilder, dialogInputDTO, api))
+                            .bodyValue(body)
+                            .accept(isStream(dialogInputDTO) ? MediaType.TEXT_EVENT_STREAM : MediaType.APPLICATION_JSON)
+                            .retrieve()
+                            .bodyToFlux(GenerateContentResponse.class)
+                            .timeout(Duration.ofMinutes(dialogInputDTO.isStream() ? 1 : 3))
+                            .onErrorResume(TimeoutException.class, throwable -> {
+                                log.error("请求超时了,是不是没开梯子?\n异常信息:{}", throwable.getMessage());
+                                return Flux.error(throwable);
+                            })
+                            .onErrorResume(WebClientResponseException.class, e -> {
+                                log.error("出错了,状态码为:{},返回的错误响应体为:{}", e.getStatusCode(), e.getResponseBodyAsString());
+                                return e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS ?
+                                        Flux.error(new ResourceExhaustedException(api, e)) :
+                                        Flux.error(e);
+                            })
+                            .map(response -> isStream(dialogInputDTO) ? streamBodyToDialogVO(response, index) : bodyToDialogVO(response))
+                            .onErrorContinue((throwable, data) -> log.error("转换元素出错了,导致出错的元素是:{} 异常信息为:{}",
+                                    data.toString(),
+                                    throwable.getMessage()));
+                });
     }
 
     @Override
@@ -103,9 +118,11 @@ public class GeminiService implements DialogService {
 
     @Override
     public String getUrl(DialogInputDTO dialogInputDTO) {
-        return isStream(dialogInputDTO) ?
+        String url = isStream(dialogInputDTO) ?
                 "/v1beta/models/{model}:streamGenerateContent" :
                 "/v1beta/models/{model}:generateContent";
+        log.info("发送的url为:{}", url);
+        return url;
     }
 
     @Override
@@ -116,6 +133,10 @@ public class GeminiService implements DialogService {
     @Override
     public URI getUriParam(UriBuilder uriBuilder, DialogInputDTO dialogInputDTO) {
         return uriBuilder.queryParam("key", getApiKey()).build(dialogInputDTO.getModel().getOut());
+    }
+
+    public URI getUriParam(UriBuilder uriBuilder, DialogInputDTO dialogInputDTO, String key) {
+        return uriBuilder.queryParam("key", key).build(dialogInputDTO.getModel().getOut());
     }
 
     private String getApiKey() {
@@ -171,10 +192,16 @@ public class GeminiService implements DialogService {
             log.warn("回复被截断咯,截断原因是:{}", finishReason);
             return;
         }
+        String content = "";
+        List<Text> parts;
+        if (
+                candidate.getContent() != null &&
+                (parts = candidate.getContent().getParts()) != null &&
+                !parts.isEmpty()
+        ) content = parts.getFirst().getText() == null ? "" : parts.getFirst().getText();
 
-        String content = candidate.getContent().getParts().getFirst().getText();
         Message message = new Message("model", content);
-        CommonReplyVO commonReplyVO = new CommonReplyVO(message, index, false);
+        CommonReplyVO commonReplyVO = new CommonReplyVO(message, index, !content.isEmpty());
         replyVOS.add(commonReplyVO);
     }
 }

@@ -15,6 +15,24 @@ SillyTavernProxy 是一款自制的 SillyTavern 代理，旨在通过接入某�
 
 **作者不承担任何责任:** 对于因使用本项目导致的任何直接或间接损失，包括但不限于数据丢失、服务中断、法律纠纷等，作者概不负责。
 
+## 推荐使用一键安装脚本使用教程(Linux和安卓Termux环境)
+```bash
+# 创建目录
+mkdir sillyTavernProxy
+# 进入创建的目录
+cd sillyTavernProxy/
+
+# 下载安装脚本
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/install.sh
+# 执行安装脚本
+bash install.sh
+
+# 启动redis
+nohup redis-server &
+# 启动项目
+java -jar SillyTavernProxy.jar
+```
+
 ## Linux端部署和使用
 
 ### 推荐使用docker部署
@@ -41,14 +59,14 @@ systemctl enable docker
 #### 拉取项目相关文件
 ```bash
 # 下载打包好的文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/SillyTavernProxy.jar
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/SillyTavernProxy.jar
 
 # 下载docker相关文件文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/docker-compose.yml
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/Dockerfile
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/docker-compose.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/Dockerfile
 
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
 ```
 #### 启动项目
 ``` bash
@@ -102,7 +120,7 @@ sudo apt install redis-server
 #### 配置项目
 ```bash
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
 
 # 打开配置文件
 vim application.yml
@@ -116,6 +134,10 @@ deepseek:
   tokens:
     - Bearer your deepseek token1
     - Bearer your deepseek token2
+gemini: 
+  Apis: 
+    - your api key1
+    - your api key2
 ```
 
 #### 配置redis
@@ -196,7 +218,7 @@ sudo apt install redis-server
 #### 配置项目
 ```bash
 # 下载配置文件
-wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.0/application.yml
+wget https://github.com/The-Falling-star/SillyTavernProxy/releases/download/v2.1/application.yml
 
 # 按照上述Linux环境部署教程以获取token
 # 打开配置文件,并在对应位置填入你的token,并配置redis
@@ -250,6 +272,27 @@ java -jar target/SillyTavernProxy.jar
 <img src="./images/teach03.png" alt="teach03">
 
 #### 4.好了,现在你配置完了一切,开始对话吧
+
+## 更新教程
+
+### Linux 和 安卓
+
+```bash
+# 获取更新
+bash update.sh
+# 检查配置文件是否有更新
+vim application.yml.latest
+```
+#### 配置文件有更新
+```bash
+#检查与此前的是否有不同,如果有,将新内容复制到application.yml(也就是原来的配置文件),并配置所需的配置项,随后执行以下指令
+rm application.yml.latest # 删除已经迁移的配置文件(可选)
+```
+#### 配置文件没有更新
+```bash
+rm application.yml.latest # 删除已经迁移的配置文件(可选)
+```
+
 
 
 ## 许可证

@@ -10,7 +10,7 @@ for url in $links; do
     # 特殊处理application.yml
         if [[ "$url" == *"application.yml"* ]]; then
             if [[ -f "application.yml" ]]; then
-                new_name="application.yml.$(date +%Y%m%d%H%M%S)"
+                new_name="application.yml.latest"
                 echo "检测到本地配置文件存在，将下载为: $new_name"
                 curl -sSL "$url" -o "$new_name"
                 continue

@@ -49,7 +49,7 @@ public class DialogController {
             case ZAI_WEN_DEEPSEEK -> dialogService.get("zaiWenService").sendDialog(dialogInputDTO);
             case DEEPSEEK -> dialogService.get("deepSeekService").sendDialog(dialogInputDTO);
             default -> {
-                if (dialogInputDTO.getModel().getId().contains("gemmmini"))
+                if (dialogInputDTO.getModel().getId().contains("gemini"))
                     yield dialogService.get("geminiService").sendDialog(dialogInputDTO);
                 else yield Flux.error(new UnknownModelException());
             }

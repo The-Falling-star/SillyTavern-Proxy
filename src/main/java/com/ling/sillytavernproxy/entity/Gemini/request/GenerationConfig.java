@@ -29,7 +29,10 @@ public class GenerationConfig {
     private Integer logprobs;
     private boolean enableEnhancedCivicAnswers;
 
-    public static final Model[] disablePenaltyModels = {Model.GEMINI_2__5_PRO_EXP,Model.GEMINI_2_FLASH_EXP};
+    public static final Model[] disablePenaltyModels = {
+            Model.GEMINI_2__5_PRO_EXP,
+            Model.GEMINI_2_FLASH_EXP,
+            Model.GEMINI_2_FLASH_THINKING_EXP_0121};
 
     public GenerationConfig(DialogInputDTO dialogInputDTO){
         this.temperature = dialogInputDTO.getTemperature();

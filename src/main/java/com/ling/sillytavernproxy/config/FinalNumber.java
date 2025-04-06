@@ -30,6 +30,7 @@ public class FinalNumber {
     public static final String MODEL_GEMINI_2_PRO_EXP_0205 = "gemini-2.0-pro-0205";
     public static final String MODEL_GEMINI_2_PRO_EXP = "gemini-2.0-pro-exp";
     public static final String MODEL_GEMINI_2__5_PRO_EXP = "gemini-2.5-pro-exp-0325";
+    public static final String MODEL_GEMINI_2__5_PRO_PREVIEW = "gemini-2.5-pro-preview";
 
     public static final String DEEPSEEK_SESSION_ID = "session_id";
 }

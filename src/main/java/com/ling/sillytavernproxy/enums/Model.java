@@ -3,7 +3,6 @@ package com.ling.sillytavernproxy.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.ling.sillytavernproxy.config.FinalNumber;
-import com.ling.sillytavernproxy.exception.UnknownModelException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +24,7 @@ public enum Model {
     // GEMINI_2_PRO_EXP_0205 (FinalNumber.MODEL_GEMINI_2_PRO_EXP_0205, "gemini-2.0-pro-exp-02-05"),
     // GEMINI_2_PRO_EXP(FinalNumber.MODEL_GEMINI_2_PRO_EXP, "gemini-2.0-pro-exp"),
     GEMINI_2__5_PRO_EXP(MODEL_GEMINI_2__5_PRO_EXP,"gemini-2.5-pro-exp-03-25"),
+    GEMINI___5_PRO_PREVIEW(MODEL_GEMINI_2__5_PRO_PREVIEW,"gemini-2.5-pro-preview-03-25"),
     UNKNOWN("unknown","unknown");
 
     @JsonValue

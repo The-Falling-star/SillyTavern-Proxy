@@ -6,8 +6,8 @@ server:
 spring:
   codec:
     max-in-memory-size: 20MB
-  profiles:
-    active: dev
+#  profiles:
+#    active: dev
   data:
     redis:
       host: redis

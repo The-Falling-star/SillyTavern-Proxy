@@ -32,7 +32,8 @@ public class GenerationConfig {
     public static final Model[] disablePenaltyModels = {
             Model.GEMINI_2__5_PRO_EXP,
             Model.GEMINI_2_FLASH_EXP,
-            Model.GEMINI_2_FLASH_THINKING_EXP_0121};
+            Model.GEMINI_2_FLASH_THINKING_EXP_0121,
+            Model.GEMINI___5_PRO_PREVIEW};
 
     public GenerationConfig(DialogInputDTO dialogInputDTO){
         this.temperature = dialogInputDTO.getTemperature();
